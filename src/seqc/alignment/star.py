@@ -39,8 +39,10 @@ def default_alignment_args(
     return default_align_args
 
 
-def align(fastq_file: str, index: str, n_threads: int, alignment_dir: str,
-          reverse_fastq_file: str or bool=None, **kwargs) -> str:
+def align(
+    fastq_file: str, index: str, n_threads: int, alignment_dir: str,
+    reverse_fastq_file: str or bool = None, **kwargs
+) -> str:
     """align a fastq file, or a paired set of fastq files
 
     :param fastq_file: str, location of a fastq file
@@ -91,10 +93,11 @@ def align(fastq_file: str, index: str, n_threads: int, alignment_dir: str,
 
 
 def create_index(
-        fasta: str,
-        gtf: str,
-        genome_dir: str,
-        read_length: int=75, **kwargs) -> None:
+    fasta: str,
+    gtf: str,
+    genome_dir: str,
+    read_length: int = 75, **kwargs
+) -> None:
     """Create a new STAR index
 
     :param fasta: complete filepath to fasta file
@@ -109,19 +112,19 @@ def create_index(
     makedirs(genome_dir, exist_ok=True)
     overhang = str(read_length - 1)
 
-    cmd = (
-        'STAR '
-        '--runMode genomeGenerate '
-        '--runThreadN {ncpu} '
-        '--genomeDir {genome_dir} '
-        '--genomeFastaFiles {fasta} '
-        '--sjdbGTFfile {gtf} '
-        '--sjdbOverhang {overhang} '.format(
-            ncpu=ncpu, genome_dir=genome_dir, fasta=fasta, gtf=gtf, overhang=overhang)
-    )
+    cmd = [
+        'STAR',
+        '--runMode', 'genomeGenerate',
+        '--runThreadN', ncpu,
+        '--genomeDir', genome_dir,
+        '--genomeFastaFiles', fasta.replace(".gz", ""),
+        '--sjdbGTFfile', gtf,
+        '--sjdbOverhang', overhang
+    ]
 
     for k, v in kwargs.items():
-        cmd += '--{k} {v} '.format(k=k, v=v)
+        cmd.append("--{}".format(k))
+        cmd.append(v)
 
     p = Popen(cmd, stderr=PIPE, stdout=PIPE)
     out, err = p.communicate()
