@@ -6,6 +6,7 @@ import numpy as np
 from seqc.sequence import gtf
 from seqc.alignment import star
 from seqc.io import S3
+from seqc import log
 
 
 class Index:
@@ -138,7 +139,9 @@ class Index:
         :param FTP ftp: open FTP link to ENSEMBL
         :param str download_name: filename for downloaded fasta file
         """
+
         release_num = ensemble_release if ensemble_release else self._identify_newest_release(ftp)
+        log.info("FASTA ENSEMBLE Release {}".format(release_num))
         ftp.cwd('/pub/release-%d/fasta/%s/dna' % (release_num, self.organism))
         ensembl_fasta_filename = self._identify_genome_file(ftp.nlst())
         with open(download_name, 'wb') as f:
@@ -151,6 +154,7 @@ class Index:
         :param str download_name: filename for downloaded gtf file
         """
         release_num = ensemble_release if ensemble_release else self._identify_newest_release(ftp)
+        log.info("GTF ENSEMBLE Release {}".format(release_num))
         ftp.cwd('/pub/release-%d/gtf/%s/' % (release_num, self.organism))
         ensembl_gtf_filename = self._identify_gtf_file(ftp.nlst(), release_num)
         with open(download_name, 'wb') as f:
