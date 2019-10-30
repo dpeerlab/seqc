@@ -112,12 +112,21 @@ def create_index(
     makedirs(genome_dir, exist_ok=True)
     overhang = str(read_length - 1)
 
+    # Popen is hard to work as far as process substitution is concerned.
+    # let's just gunzip it before passing to STAR.
+    if fasta.endswith(".gz"):
+        proc_gunzip = Popen(["gunzip", fasta])
+        out, err = proc_gunzip.communicate()
+        if err:
+            raise ChildProcessError(err)
+        fasta = fasta.replace(".gz", "")
+
     cmd = [
         'STAR',
         '--runMode', 'genomeGenerate',
         '--runThreadN', ncpu,
         '--genomeDir', genome_dir,
-        '--genomeFastaFiles', fasta.replace(".gz", ""),
+        '--genomeFastaFiles', fasta,
         '--sjdbGTFfile', gtf,
         '--sjdbOverhang', overhang
     ]
