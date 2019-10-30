@@ -11,6 +11,20 @@ def index(args):
     from seqc.sequence.index import Index
 
     log.setup_logger(args.log_name)
-    with ec2.instance_clean_up(args.email, args.upload, log_name=args.log_name):
-        idx = Index(args.organism, args.additional_id_types)
-        idx.create_index(args.upload_location)
+    log.args(args)
+
+    if args.remote:
+        with ec2.instance_clean_up(args.email, args.upload_prefix, log_name=args.log_name):
+            idx = Index(args.organism, args.ids)
+            idx.create_index(
+                s3_location=args.upload_prefix,
+                ensemble_release=args.ensemble_release,
+                read_length=args.read_length
+            )
+    else:
+        idx = Index(args.organism, args.ids)
+        idx.create_index(
+            s3_location=args.upload_prefix,
+            ensemble_release=args.ensemble_release,
+            read_length=args.read_length
+        )
