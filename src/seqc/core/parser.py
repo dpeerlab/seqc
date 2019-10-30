@@ -199,6 +199,13 @@ def parse_args(args):
         help='list of gene biotypes that are considered valid. Defaults are '
              'protein_coding and lincRNA. In most cases, other biotypes are not expected '
              'to be captured by SEQC, and should be excluded')
+    pindex.add_argument(
+        '--ensemble-release', default=None, type=int, help='ENSEMBLE release number to be used (e.g. 85)'
+    )
+    pindex.add_argument(
+        '--read-length', default=100, type=int,
+        help='length of reads that will be aligned against this index (will be used for STAR --sjdbOverhang)'
+    )
 
     for parser in [pindex, p]:
         r = parser.add_argument_group('Amazon Web Services arguments')
