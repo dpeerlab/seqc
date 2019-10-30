@@ -1,3 +1,4 @@
+import os
 import re
 import fileinput
 import string
@@ -27,12 +28,12 @@ class Record:
         return '<Record: %s>' % bytes(self).decode()
 
     def __bytes__(self) -> bytes:
-        return b'\t'.join(self._fields)
+        return '\t'.join(self._fields)
 
     def _parse_attribute(self) -> None:
-        for field in self._fields[8].rstrip(b';\n').split(b';'):
+        for field in self._fields[8].rstrip(';\n').split(';'):
             key, *value = field.strip().split()
-            self._attribute[key] = b' '.join(value).strip(b'"')
+            self._attribute[key] = ' '.join(value).strip('"')
 
     def __hash__(self) -> int:
         """concatenate strand, start, end, and chromosome and hash the resulting bytes"""
@@ -101,18 +102,18 @@ class Record:
     @property
     def integer_gene_id(self) -> int:
         """ENSEMBL gene id without the organism specific prefix, encoded as an integer"""
-        return int(self.attribute(b'gene_id').split(b'.')[0]
+        return int(self.attribute(b'gene_id').split('.')[0]
                    .translate(None, self._del_letters))
 
     @property
     def organism_prefix(self) -> bytes:
         """Organism prefix of ENSEMBL gene id (e.g. ENSG for human, ENSMUSG)"""
-        return self.attribute(b'gene_id').translate(None, self._del_non_letters)
+        return self.attribute('gene_id').translate(None, self._del_non_letters)
 
     @property
     def string_gene_id(self) -> bytes:
         """ENSEMBL gene id, including organism prefix."""
-        return self.attribute(b'gene_id')
+        return self.attribute('gene_id')
 
     @staticmethod
     def int2str_gene_id(integer_id: int, organism_prefix: bytes) -> bytes:
@@ -124,7 +125,7 @@ class Record:
         """
         bytestring = str(integer_id).encode()
         diff = 11 - len(bytestring)
-        return organism_prefix + (b'0' * diff) + bytestring
+        return organism_prefix + ('0' * diff) + bytestring
 
     def __eq__(self, other):
         """equivalent to testing if start, end, chrom and strand are the same."""
@@ -163,7 +164,9 @@ class GeneIntervals:
           transcript sizes indicates that the majority of non-erroneous fragments of
           mRNA molecules should align within this region.
         """
-        self._chromosomes_to_genes = self.construct_translator(gtf, max_transcript_length)
+        self._chromosomes_to_genes = self.construct_translator(
+            gtf, max_transcript_length
+        )
 
     @staticmethod
     def iterate_adjusted_exons(exons, strand, max_transcript_length):
@@ -266,7 +269,8 @@ class GeneIntervals:
                 except KeyError:
                     results_dictionary[tx_chromosome][tx_strand] = IntervalTree()
                     results_dictionary[tx_chromosome][tx_strand].addi(
-                        start, end, gene_id)
+                        start, end, gene_id
+                    )
         return dict(results_dictionary)
 
     def translate(self, chromosome, strand, pos):
@@ -304,8 +308,22 @@ class Reader(reader.Reader):
 
     def __iter__(self):
         """return an iterator over all non-header records in gtf"""
-        hook = fileinput.hook_compressed
-        with fileinput.input(self._files, openhook=hook, mode='r') as f:
+
+        # fixme: workaround for https://bugs.python.org/issue36865 (as of 2019-10-24)
+        # force to "rt" instead of using `mode` being passed
+        # this will let us avoid using `.decode()` all over the place
+        def hook_compressed(filename, mode):
+            ext = os.path.splitext(filename)[1]
+            if ext == '.gz':
+                import gzip
+                return gzip.open(filename, "rt")
+            elif ext == '.bz2':
+                import bz2
+                return bz2.BZ2File(filename, "rt")
+            else:
+                return open(filename, mode)
+
+        with fileinput.input(self._files, openhook=hook_compressed, mode='r') as f:
 
             # get rid of header lines
             file_iterator = iter(f)
@@ -313,7 +331,8 @@ class Reader(reader.Reader):
             while first_record.startswith('#'):
                 first_record = next(file_iterator)
 
-            yield first_record.split('\t')  # avoid loss of first non-comment line
+            # avoid loss of first non-comment line
+            yield first_record.split('\t')
 
             for record in file_iterator:  # now, run to exhaustion
                 yield record.split('\t')
