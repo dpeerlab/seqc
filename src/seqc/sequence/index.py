@@ -147,8 +147,7 @@ class Index:
         ensembl_fasta_filename = self._identify_genome_file(ftp.nlst())
 
         log.info("FASTA Ensemble Release {}".format(release_num))
-        log.info(work_dir)
-        log.info(ensembl_fasta_filename)
+        log.info("{}:{}/{}/{}".format(ftp.host, ftp.port, work_dir, ensembl_fasta_filename))
 
         with open(download_name, 'wb') as f:
             ftp.retrbinary('RETR %s' % ensembl_fasta_filename, f.write)
@@ -165,8 +164,7 @@ class Index:
         ensembl_gtf_filename = self._identify_gtf_file(ftp.nlst(), release_num)
 
         log.info("GTF Ensemble Release {}".format(release_num))
-        log.info(work_dir)
-        log.info(ensembl_gtf_filename)
+        log.info("{}:{}/{}/{}".format(ftp.host, ftp.port, work_dir, ensembl_gtf_filename))
 
         with open(download_name, 'wb') as f:
             ftp.retrbinary('RETR %s' % ensembl_gtf_filename, f.write)
@@ -207,8 +205,6 @@ class Index:
             )
 
         ensemble_ftp_address = "ftp.ensembl.org"
-
-        log.info("Ensemble FTP={}".format(ensemble_ftp_address))
 
         with FTP(host=ensemble_ftp_address) as ftp:
             ftp.login()
