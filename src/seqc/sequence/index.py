@@ -131,6 +131,7 @@ class Index:
         open_ftp.cwd('/pub')
         releases = [f for f in open_ftp.nlst() if 'release' in f]
         newest = max(int(r[r.find('-') + 1:]) for r in releases)
+
         return newest - 1
 
     def _download_fasta_file(self, ftp: FTP, download_name: str, ensemble_release: int) -> None:
@@ -141,9 +142,14 @@ class Index:
         """
 
         release_num = ensemble_release if ensemble_release else self._identify_newest_release(ftp)
-        log.info("FASTA ENSEMBLE Release {}".format(release_num))
-        ftp.cwd('/pub/release-%d/fasta/%s/dna' % (release_num, self.organism))
+        work_dir = '/pub/release-%d/fasta/%s/dna' % (release_num, self.organism)
+        ftp.cwd(work_dir)
         ensembl_fasta_filename = self._identify_genome_file(ftp.nlst())
+
+        log.info("FASTA Ensemble Release {}".format(release_num))
+        log.info(work_dir)
+        log.info(ensembl_fasta_filename)
+
         with open(download_name, 'wb') as f:
             ftp.retrbinary('RETR %s' % ensembl_fasta_filename, f.write)
 
@@ -154,9 +160,14 @@ class Index:
         :param str download_name: filename for downloaded gtf file
         """
         release_num = ensemble_release if ensemble_release else self._identify_newest_release(ftp)
-        log.info("GTF ENSEMBLE Release {}".format(release_num))
-        ftp.cwd('/pub/release-%d/gtf/%s/' % (release_num, self.organism))
+        work_dir = '/pub/release-%d/gtf/%s/' % (release_num, self.organism)
+        ftp.cwd(work_dir)
         ensembl_gtf_filename = self._identify_gtf_file(ftp.nlst(), release_num)
+
+        log.info("GTF Ensemble Release {}".format(release_num))
+        log.info(work_dir)
+        log.info(ensembl_gtf_filename)
+
         with open(download_name, 'wb') as f:
             ftp.retrbinary('RETR %s' % ensembl_gtf_filename, f.write)
 
@@ -195,7 +206,11 @@ class Index:
                 self.index_folder_name, self.organism
             )
 
-        with FTP(host='ftp.ensembl.org') as ftp:
+        ensemble_ftp_address = "ftp.ensembl.org"
+
+        log.info("Ensemble FTP={}".format(ensemble_ftp_address))
+
+        with FTP(host=ensemble_ftp_address) as ftp:
             ftp.login()
             self._download_fasta_file(ftp, fasta_name, ensemble_release)
             self._download_gtf_file(ftp, gtf_name, ensemble_release)
@@ -318,11 +333,17 @@ class Index:
         if self.index_folder_name is not '.':
             os.makedirs(self.index_folder_name, exist_ok=True)
 
+        log.info("Downloading Ensemble files...")
         self._download_ensembl_files(ensemble_release)
+
+        log.info("Subsetting genes...")
         self._subset_genes(valid_biotypes=valid_biotypes)
 
+        log.info("Creating STAR index...")
         self._create_star_index(read_length=read_length)
+
         if s3_location:
+            log.info("Uploading...")
             self._upload_index(
                 '%s/%s' % (self.index_folder_name, self.organism),
                 s3_location
