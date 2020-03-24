@@ -116,7 +116,7 @@ class Section:
             'the poly-a tail of an mRNA molecule.')
         description_section = TextContent(description)
 
-        # Get counts 
+        # Get counts
         no_gene = np.sum(ra.data['status'] & ra.filter_codes['no_gene'] > 0)
         gene_not_unique = np.sum(ra.data['status'] & ra.filter_codes['gene_not_unique'] > 0)
         primer_missing = np.sum(ra.data['status'] & ra.filter_codes['primer_missing'] > 0)
@@ -230,7 +230,7 @@ class Section:
         :return:
         """
         plot.Diagnostics.cell_size_histogram(counts_matrix, save=figure_path)
-        
+
         # Number of cells and molecule count distributions
         image_legend = "Number of cells: {} <br>".format(counts_matrix.shape[0])
         ms = counts_matrix.sum(axis=1)
@@ -384,7 +384,7 @@ class MiniSummary:
 
         # Doing PCA transformation
         pcaModel = PCA(n_components=min(20, counts_normalized.shape[1]))
-        counts_pca_reduced = pcaModel.fit_transform(counts_normalized.as_matrix())
+        counts_pca_reduced = pcaModel.fit_transform(counts_normalized.values)
 
         # taking at most 20 components or total variance is greater than 80%
         num_comps = 0
@@ -396,7 +396,7 @@ class MiniSummary:
         self.counts_after_pca = counts_pca_reduced[:, :num_comps]
         self.explained_variance_ratio = pcaModel.explained_variance_ratio_
 
-        # regressed library size out of principal components 
+        # regressed library size out of principal components
         for c in range(num_comps):
             lm = LinearRegression(normalize=False)
             X = self.counts_filtered.sum(1).values.reshape(len(self.counts_filtered), 1)
@@ -424,7 +424,7 @@ class MiniSummary:
 
     def render(self):
         plot.Diagnostics.pca_components(self.pca_fig, self.explained_variance_ratio, self.counts_after_pca)
-        plot.Diagnostics.phenograph_clustering(self.tsne_and_phenograph_fig, self.counts_filtered.sum(1), 
+        plot.Diagnostics.phenograph_clustering(self.tsne_and_phenograph_fig, self.counts_filtered.sum(1),
                                                self.clustering_communities, self.counts_after_tsne)
 
         self.mini_summary_d['seq_sat_rate'] = ((self.mini_summary_d['avg_reads_per_molc'] - 1.0) * 100.0
@@ -438,13 +438,13 @@ class MiniSummary:
             warning_d["High percentage of cell death"] = "No"
         warning_d["Noisy first few principle components"] = "Yes" if (self.explained_variance_ratio[0]<=0.05) else "No"
         if self.mini_summary_d['seq_sat_rate'] <= 5.00:
-            warning_d["Low sequencing saturation rate"] = ("Yes (%.2f%%)" % (self.mini_summary_d['seq_sat_rate'])) 
+            warning_d["Low sequencing saturation rate"] = ("Yes (%.2f%%)" % (self.mini_summary_d['seq_sat_rate']))
         else:
             warning_d["Low sequencing saturation rate"] = "No"
 
         env = Environment(loader=PackageLoader('seqc.summary', 'templates'))
         section_template = env.get_template('mini_summary_base.html')
-        rendered_section = section_template.render(output_prefix = self.output_prefix, warning_d = warning_d, 
+        rendered_section = section_template.render(output_prefix = self.output_prefix, warning_d = warning_d,
                                                    mini_summary_d = self.mini_summary_d, cellsize_fig = self.cellsize_fig,
                                                    pca_fig = self.pca_fig, filter_fig = self.filter_fig,
                                                    tsne_and_phenograph_fig = self.tsne_and_phenograph_fig)
