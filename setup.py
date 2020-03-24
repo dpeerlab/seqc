@@ -44,7 +44,7 @@ setup(
         'awscli',
         'Cython>0.14',
         'numexpr>=2.4',
-        'pandas>=0.18.1',
+        'pandas>=1.0.3',
         'paramiko>=2.0.2',
         'regex',
         'requests',
