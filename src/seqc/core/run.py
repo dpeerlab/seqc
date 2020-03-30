@@ -13,9 +13,10 @@ def run(args) -> None:
 
     import os
     import multiprocessing
-    from seqc import log, ec2, platforms, io
+    from seqc import log, ec2, platforms, io, version
     from seqc.sequence import fastq
     from seqc.alignment import star
+    from seqc.alignment import sam
     from seqc.email_ import email_user
     from seqc.read_array import ReadArray
     from seqc.core import verify, download
@@ -219,6 +220,11 @@ def run(args) -> None:
             email=args.email, upload=args.upload_prefix, log_name=args.log_name,
             debug=args.debug, terminate=args.terminate
     ):
+
+        log.notify("SEQC=v{}".format(version.__version__))
+        log.notify("STAR=v{}".format(star.get_version()))
+        log.notify("samtools=v{}".format(sam.get_version()))
+
         pigz, mutt = verify.executables('pigz', 'mutt')
         if mutt:
             log.notify('mutt executable identified, email will be sent when run '

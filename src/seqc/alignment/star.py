@@ -4,6 +4,20 @@ from os import makedirs
 import shlex
 
 
+def get_version():
+
+    proc = Popen(["STAR", "--version"], stderr=PIPE, stdout=PIPE)
+    out, err = proc.communicate()
+    if err:
+        raise ChildProcessError(err)
+
+    # e.g. STAR_2.5.3a
+    # --> 2.5.3a
+    version = out.decode().strip().split("_")[1]
+
+    return version
+
+
 def default_alignment_args(
         fastq_records: str, n_threads: int or str, index: str, output_dir: str) -> dict:
     """default arguments for STAR alignment
@@ -16,7 +30,7 @@ def default_alignment_args(
     :param output_dir: str, prefix for output files
     :return: dict, default alignment arguments
     """
-    default_align_args = {
+    default_align_args={
         '--runMode': 'alignReads',
         '--runThreadN': str(n_threads),
         '--genomeDir': index,
@@ -42,6 +56,8 @@ def default_alignment_args(
 def align(
     fastq_file: str, index: str, n_threads: int, alignment_dir: str,
     reverse_fastq_file: str or bool = None, **kwargs
+
+
 ) -> str:
     """align a fastq file, or a paired set of fastq files
 
@@ -54,24 +70,24 @@ def align(
     :return: str, .sam file location
     """
 
-    runtime_args = default_alignment_args(
+    runtime_args=default_alignment_args(
         fastq_file, n_threads, index, alignment_dir)
 
     for k, v in kwargs.items():  # overwrite or add any arguments passed from cmdline
         if not isinstance(k, str):
             try:
-                k = str(k)
+                k=str(k)
             except ValueError:
                 raise ValueError('arguments passed to STAR must be strings')
         if not isinstance(v, str):
             try:
-                v = str(v)
+                v=str(v)
             except ValueError:
                 raise ValueError('arguments passed to STAR must be strings')
-        runtime_args['--' + k] = v
+        runtime_args['--' + k]=v
 
     # construct command line arguments for STAR
-    cmd = ['STAR']
+    cmd=['STAR']
     if reverse_fastq_file:
         for key, value in runtime_args.items():
             if key == '--readFilesIn':
@@ -83,9 +99,9 @@ def align(
         for pair in runtime_args.items():
             cmd.extend(pair)
 
-    cmd = shlex.split(' '.join(cmd))
-    aln = Popen(cmd, stderr=PIPE, stdout=PIPE)
-    out, err = aln.communicate()
+    cmd=shlex.split(' '.join(cmd))
+    aln=Popen(cmd, stderr = PIPE, stdout = PIPE)
+    out, err=aln.communicate()
     if err:
         raise ChildProcessError(err)
 

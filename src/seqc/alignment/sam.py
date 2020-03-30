@@ -4,6 +4,26 @@ import shutil
 import gzip
 
 
+def get_version():
+
+    proc = Popen(["samtools", "--version"], stderr=PIPE, stdout=PIPE)
+    out, err = proc.communicate()
+    if err:
+        raise ChildProcessError(err)
+
+    # e.g.
+    # samtools 1.9
+    # Using htslib 1.9
+    # Copyright (C) 2018 Genome Research Ltd.
+    # --> 'samtools 1.9'
+    version = out.decode().strip().split("\n")[0]
+
+    # --> '1.9'
+    version = version.split(" ")[1]
+
+    return version
+
+
 class SamRecord:
     """Simple record object allowing access to Sam record properties"""
 
