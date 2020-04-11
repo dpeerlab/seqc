@@ -11,6 +11,7 @@ def index(args):
     import logging
     from seqc import ec2, log
     from seqc.sequence.index import Index
+    from seqc.alignment import star
     from seqc import version
 
     logging.basicConfig(
@@ -21,10 +22,11 @@ def index(args):
         ]
     )
 
-    log.info("SEQC v{}".format(version.__version__))
+    log.info("SEQC=v{}".format(version.__version__))
+    log.info("STAR=v{}".format(star.get_version()))
     log.args(args)
 
-    idx = Index(args.organism, args.ids)
+    idx = Index(args.organism, args.ids, args.folder)
     idx.create_index(
         s3_location=args.upload_prefix,
         ensemble_release=args.ensemble_release,
