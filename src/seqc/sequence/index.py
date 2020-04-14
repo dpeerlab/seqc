@@ -190,6 +190,7 @@ class Index:
         """download the fasta, gtf, and id_mapping file for the organism defined in
         cls.organism
 
+        :param ensemble_release: Ensemble release number
         :param fasta_name: name for the downloaded fasta file
         :param gtf_name: name for the downloaded gtf file
         :param conversion_name: name for the downloaded conversion file
