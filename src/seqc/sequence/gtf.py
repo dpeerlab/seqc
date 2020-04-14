@@ -15,9 +15,8 @@ class Record:
 
     __slots__ = ['_fields', '_attribute']
 
-    _del_letters = string.ascii_letters.encode()
-    _del_non_letters = ''.join(set(string.printable).difference(string.ascii_letters))\
-        .encode()
+    _del_letters = string.ascii_letters
+    _del_non_letters = ''.join(set(string.printable).difference(string.ascii_letters))
 
     def __init__(self, fields: list):
 
@@ -25,9 +24,9 @@ class Record:
         self._attribute = {}
 
     def __repr__(self) -> str:
-        return '<Record: %s>' % bytes(self).decode()
+        return '<Record: {}>'.format('\t'.join(self._fields))
 
-    def __bytes__(self) -> bytes:
+    def __bytes__(self) -> str:
         return '\t'.join(self._fields)
 
     def _parse_attribute(self) -> None:
@@ -40,19 +39,19 @@ class Record:
         return hash(self._fields[6] + self._fields[3] + self._fields[4] + self._fields[0])
 
     @property
-    def seqname(self) -> bytes:
+    def seqname(self) -> str:
         return self._fields[0]
 
     @property
-    def chromosome(self) -> bytes:
+    def chromosome(self) -> str:
         return self._fields[0]  # synonym for seqname
 
     @property
-    def source(self) -> bytes:
+    def source(self) -> str:
         return self._fields[1]
 
     @property
-    def feature(self) -> bytes:
+    def feature(self) -> str:
         return self._fields[2]
 
     @property
@@ -64,15 +63,15 @@ class Record:
         return int(self._fields[4])
 
     @property
-    def score(self) -> bytes:
+    def score(self) -> str:
         return self._fields[5]
 
     @property
-    def strand(self) -> bytes:
+    def strand(self) -> str:
         return self._fields[6]
 
     @property
-    def frame(self) -> bytes:
+    def frame(self) -> str:
         return self._fields[7]
 
     @property
@@ -102,28 +101,28 @@ class Record:
     @property
     def integer_gene_id(self) -> int:
         """ENSEMBL gene id without the organism specific prefix, encoded as an integer"""
-        return int(self.attribute(b'gene_id').split('.')[0]
+        return int(self.attribute('gene_id').split('.')[0]
                    .translate(None, self._del_letters))
 
     @property
-    def organism_prefix(self) -> bytes:
+    def organism_prefix(self) -> str:
         """Organism prefix of ENSEMBL gene id (e.g. ENSG for human, ENSMUSG)"""
         return self.attribute('gene_id').translate(None, self._del_non_letters)
 
     @property
-    def string_gene_id(self) -> bytes:
+    def string_gene_id(self) -> str:
         """ENSEMBL gene id, including organism prefix."""
         return self.attribute('gene_id')
 
     @staticmethod
-    def int2str_gene_id(integer_id: int, organism_prefix: bytes) -> bytes:
+    def int2str_gene_id(integer_id: int, organism_prefix: str) -> str:
         """
         converts an integer gene id (suffix) to a string gene id (including organism-
         specific suffix)
-        :param organism_prefix: bytes
+        :param organism_prefix: str
         :param integer_id: int
         """
-        bytestring = str(integer_id).encode()
+        bytestring = str(integer_id)
         diff = 11 - len(bytestring)
         return organism_prefix + ('0' * diff) + bytestring
 
@@ -279,8 +278,8 @@ class GeneIntervals:
         Uses the IntervalTree data structure to rapidly search for the corresponding
         identifier.
 
-        :param bytes chromosome: chromosome for this alignment
-        :param bytes strand: strand for this alignment (one of ['+', '-'])
+        :param str chromosome: chromosome for this alignment
+        :param str strand: strand for this alignment (one of ['+', '-'])
         :param int pos: position of the alignment within the chromosome
         :return int|None: Returns either an integer gene_id if a unique gene was found
           at the specified position, or None otherwise
@@ -303,7 +302,8 @@ class Reader(reader.Reader):
     methods.
 
     :method __iter__: Iterator over all non-header records in gtf; yields Record objects.
-    :method iter_genes: Iterator over all genes in gtf; yields Gene objects.
+    :method iter_transcripts: Iterate over transcripts in a gtf file, returning a transcripts's
+        chromosome strand, gene_id, and a list of tab-split exon records
     """
 
     def __iter__(self):
