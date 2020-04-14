@@ -10,3 +10,4 @@ dist/*
 .project
 .pydevproject
 .c9/
+test-data/
