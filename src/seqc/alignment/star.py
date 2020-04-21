@@ -11,15 +11,20 @@ def get_version():
     if err:
         raise ChildProcessError(err)
 
-    # e.g. STAR_2.5.3a
-    # --> 2.5.3a
-    version = out.decode().strip().split("_")[1]
+    version = out.decode().strip()
 
-    return version
+    if version.startswith("STAR_"):
+        # e.g. STAR_2.5.3a
+        # --> 2.5.3a
+        return out.decode().strip().split("_")[1]
+    else:
+        # e.g. 2.7.3a
+        return version
 
 
 def default_alignment_args(
-        fastq_records: str, n_threads: int or str, index: str, output_dir: str) -> dict:
+    fastq_records: str, n_threads: int or str, index: str, output_dir: str
+) -> dict:
     """default arguments for STAR alignment
 
     To report unaligned reads, add '--outSAMunmapped': 'Within',
@@ -30,33 +35,36 @@ def default_alignment_args(
     :param output_dir: str, prefix for output files
     :return: dict, default alignment arguments
     """
-    default_align_args={
-        '--runMode': 'alignReads',
-        '--runThreadN': str(n_threads),
-        '--genomeDir': index,
-        '--outFilterType': 'BySJout',
-        '--outFilterMultimapNmax': '10',  # require unique alignments
-        '--limitOutSJcollapsed': '2000000',  # deal with many splice variants
-        '--alignSJDBoverhangMin': '8',
-        '--outFilterMismatchNoverLmax': '0.04',
-        '--alignIntronMin': '20',
-        '--alignIntronMax': '1000000',
-        '--readFilesIn': fastq_records,
-        '--outSAMprimaryFlag': 'AllBestScore',  # all equal-scoring reads are primary
-        '--outSAMtype': 'BAM Unsorted',
-        '--outFileNamePrefix': output_dir,
+    default_align_args = {
+        "--runMode": "alignReads",
+        "--runThreadN": str(n_threads),
+        "--genomeDir": index,
+        "--outFilterType": "BySJout",
+        "--outFilterMultimapNmax": "10",  # require unique alignments
+        "--limitOutSJcollapsed": "2000000",  # deal with many splice variants
+        "--alignSJDBoverhangMin": "8",
+        "--outFilterMismatchNoverLmax": "0.04",
+        "--alignIntronMin": "20",
+        "--alignIntronMax": "1000000",
+        "--readFilesIn": fastq_records,
+        "--outSAMprimaryFlag": "AllBestScore",  # all equal-scoring reads are primary
+        "--outSAMtype": "BAM Unsorted",
+        "--outFileNamePrefix": output_dir,
     }
-    if fastq_records.endswith('.gz'):
-        default_align_args['--readFilesCommand'] = 'gunzip -c'
-    if fastq_records.endswith('.bz2'):
-        default_align_args['--readFilesCommand'] = 'bunzip2 -c'
+    if fastq_records.endswith(".gz"):
+        default_align_args["--readFilesCommand"] = "gunzip -c"
+    if fastq_records.endswith(".bz2"):
+        default_align_args["--readFilesCommand"] = "bunzip2 -c"
     return default_align_args
 
 
 def align(
-    fastq_file: str, index: str, n_threads: int, alignment_dir: str,
-    reverse_fastq_file: str or bool = None, **kwargs
-
+    fastq_file: str,
+    index: str,
+    n_threads: int,
+    alignment_dir: str,
+    reverse_fastq_file: str or bool = None,
+    **kwargs
 
 ) -> str:
     """align a fastq file, or a paired set of fastq files
@@ -70,27 +78,26 @@ def align(
     :return: str, .sam file location
     """
 
-    runtime_args=default_alignment_args(
-        fastq_file, n_threads, index, alignment_dir)
+    runtime_args = default_alignment_args(fastq_file, n_threads, index, alignment_dir)
 
     for k, v in kwargs.items():  # overwrite or add any arguments passed from cmdline
         if not isinstance(k, str):
             try:
-                k=str(k)
+                k = str(k)
             except ValueError:
-                raise ValueError('arguments passed to STAR must be strings')
+                raise ValueError("arguments passed to STAR must be strings")
         if not isinstance(v, str):
             try:
-                v=str(v)
+                v = str(v)
             except ValueError:
-                raise ValueError('arguments passed to STAR must be strings')
-        runtime_args['--' + k]=v
+                raise ValueError("arguments passed to STAR must be strings")
+        runtime_args["--" + k] = v
 
     # construct command line arguments for STAR
-    cmd=['STAR']
+    cmd = ["STAR"]
     if reverse_fastq_file:
         for key, value in runtime_args.items():
-            if key == '--readFilesIn':
+            if key == "--readFilesIn":
                 cmd.extend((key, value))
                 cmd.append(reverse_fastq_file)
             else:
@@ -99,20 +106,17 @@ def align(
         for pair in runtime_args.items():
             cmd.extend(pair)
 
-    cmd=shlex.split(' '.join(cmd))
-    aln=Popen(cmd, stderr = PIPE, stdout = PIPE)
-    out, err=aln.communicate()
+    cmd = shlex.split(" ".join(cmd))
+    aln = Popen(cmd, stderr=PIPE, stdout=PIPE)
+    _, err = aln.communicate()
     if err:
         raise ChildProcessError(err)
 
-    return alignment_dir + 'Aligned.out.bam'
+    return alignment_dir + "Aligned.out.bam"
 
 
 def create_index(
-    fasta: str,
-    gtf: str,
-    genome_dir: str,
-    read_length: int = 75, **kwargs
+    fasta: str, gtf: str, genome_dir: str, read_length: int = 75, **kwargs
 ) -> None:
     """Create a new STAR index
 
@@ -138,13 +142,19 @@ def create_index(
         fasta = fasta.replace(".gz", "")
 
     cmd = [
-        'STAR',
-        '--runMode', 'genomeGenerate',
-        '--runThreadN', ncpu,
-        '--genomeDir', genome_dir,
-        '--genomeFastaFiles', fasta,
-        '--sjdbGTFfile', gtf,
-        '--sjdbOverhang', overhang
+        "STAR",
+        "--runMode",
+        "genomeGenerate",
+        "--runThreadN",
+        ncpu,
+        "--genomeDir",
+        genome_dir,
+        "--genomeFastaFiles",
+        fasta,
+        "--sjdbGTFfile",
+        gtf,
+        "--sjdbOverhang",
+        overhang,
     ]
 
     for k, v in kwargs.items():
