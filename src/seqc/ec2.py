@@ -736,7 +736,7 @@ class SSHConnection:
 class instance_clean_up:
 
     def __init__(
-        self, email=None, upload=None, log_name='seqc.log', terminate=True, debug=False, running_locally=False
+        self, email=None, upload=None, log_name='seqc.log', terminate=True, debug=False, running_remote=False
     ):
         """Execution context for on-server code execution with defined clean-up practices.
 
@@ -764,7 +764,7 @@ class instance_clean_up:
         self.err_status = False
         self.mutt = verify.executables('mutt')[0]  # unpacking necessary for singleton
         self.debug = debug
-        self.running_locally = running_locally
+        self.running_remote = running_remote
 
     @staticmethod
     def email_user(attachment: str, email_body: str, email_address: str) -> None:
@@ -851,8 +851,8 @@ class instance_clean_up:
                 io.S3.upload_file(self.log_name, bucket, key)
             upload_file()
 
-        # terminate if no errors and debug is False and it's not running locally
-        if self.terminate and not self.running_locally:
+        # terminate if no errors and debug is False and if it's running remote (e.g. AWS)
+        if self.terminate and self.running_remote:
             if exc_type and self.debug:
                 return  # don't terminate if an error was raised and debug was set
             instance_id = self._get_instance_id()
