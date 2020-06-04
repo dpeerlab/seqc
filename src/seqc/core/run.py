@@ -218,7 +218,7 @@ def run(args) -> None:
 
     with ec2.instance_clean_up(
             email=args.email, upload=args.upload_prefix, log_name=args.log_name,
-            debug=args.debug, terminate=args.terminate
+            debug=args.debug, terminate=args.terminate, running_locally=args.remote
     ):
 
         log.notify("SEQC=v{}".format(version.__version__))
