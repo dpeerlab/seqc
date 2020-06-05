@@ -10,8 +10,8 @@ For users with access to in-house compute clusters, SEQC can be installed on you
 
 ### Dependencies:
 
-
 #### Python3
+
 Python must be installed on your local machine to run SEQC. We recommend installing python3 through your unix operating system's package manager. For Mac OSX users we recommend <a href=http://brew.sh/>homebrew</a>. Typical installation commands would be:
 
     brew install python3  # mac
@@ -27,13 +27,16 @@ Installing these libraries is necessary before installing SEQC.
     pip3 install bhtsne
 
 #### STAR
+
 To process data locally using SEQC, you must install the <a href=https://github.com/alexdobin/STAR>STAR Aligner</a>, <a href=http://www.htslib.org/>Samtools</a>, and <a href=https://support.hdfgroup.org/HDF5/>hdf5</a>. If you only intend to use SEQC to trigger remote processing on AWS, these dependencies are optional. We recommend installing samtools and hdf5 through your package manager, if possible.
 
 #### Hardware Requirements:
+
 For processing a single lane (~200M reads) against human- and mouse-scale genomes, SEQC requires 30GB RAM, approximately 200GB free hard drive space, and scales linearly with additional compute cores. If running on AWS (see below), jobs are automatically scaled up or down according to the size of the input. There are no hardware requirements for the computer used to launch remote instances.
 
 
 #### Amazon Web Services:
+
 SEQC can be run on any unix-based operating system, however it also features the ability to automatically spawn Amazon Web Services instances to process your data. If you wish to take advantage of AWS, you will need to follow their instructions to:
 
 1. <a href=http://aws.amazon.com>Set up an AWS account</a>
@@ -46,7 +49,8 @@ SEQC can be run on any unix-based operating system, however it also features the
 Once all dependencies have been installed, SEQC can be installed on any machine by typing:
 
     $> git clone https://github.com/dpeerlab/seqc.git
-    $> cd seqc && python3 setup.py install
+    $> cd seqc
+    $> pip3 install .
 
 Please note that to avoid passing the -k/--rsa-key command when you execute SEQC runs, you can also set the environment variable `AWS_RSA_KEY` to the path to your newly created key.
 
