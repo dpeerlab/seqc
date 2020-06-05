@@ -30,7 +30,8 @@ def index(args):
     idx.create_index(
         s3_location=args.upload_prefix,
         ensemble_release=args.ensemble_release,
-        read_length=args.read_length
+        read_length=args.read_length,
+        valid_biotypes=args.valid_biotypes
     )
 
     log.info("DONE.")
