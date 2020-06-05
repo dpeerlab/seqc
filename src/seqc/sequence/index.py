@@ -113,11 +113,15 @@ class Index:
         )
 
     @staticmethod
-    def _identify_gtf_file(files: [str], newest: int) -> str:
+    def _identify_gtf_file(files: [str], release_num: int) -> str:
         """Identify and return the basic gtf file from a list of annotation files"""
+        search_pattern = ".%d.chr.gtf.gz" % release_num
         for f in files:
-            if f.endswith('.%d.gtf.gz' % newest):
+            if f.endswith(search_pattern):
                 return f
+
+        raise Exception("Unable to find *.{}".format(search_pattern)
+    )
 
     @staticmethod
     def _identify_newest_release(open_ftp: FTP) -> int:
@@ -129,7 +133,7 @@ class Index:
         :param FTP open_ftp: open FTP link to ftp.ensembl.org
         """
         open_ftp.cwd('/pub')
-        releases = [f for f in open_ftp.nlst() if 'release' in f]
+        releases = [f for f in open_ftp.nlst() if f.startswith("release-")]
         newest = max(int(r[r.find('-') + 1:]) for r in releases)
 
         return newest - 1
@@ -327,7 +331,7 @@ class Index:
         :param s3_location: optional, s3 location to upload the index to.
         :return:
         """
-        if self.index_folder_name is not '.':
+        if self.index_folder_name != '.':
             os.makedirs(self.index_folder_name, exist_ok=True)
 
         log.info("Downloading Ensemble files...")
