@@ -195,7 +195,8 @@ def parse_args(args):
              'these consortia to be considered valid and appear in the final SEQC count '
              'matrix.')
     pindex.add_argument(
-        '-b', '--valid-biotypes', default=('protein_coding', 'lincRNA'),
+        '-b', '--valid-biotypes',
+        default=('protein_coding', 'lincRNA', 'IG_V_gene', 'IG_C_gene', 'IG_J_gene', 'TR_C_gene', 'TR_J_gene', 'TR_V_gene', 'TR_D_gene', 'IG_D_gene'),
         help='list of gene biotypes that are considered valid. Defaults are '
              'protein_coding and lincRNA. In most cases, other biotypes are not expected '
              'to be captured by SEQC, and should be excluded')
