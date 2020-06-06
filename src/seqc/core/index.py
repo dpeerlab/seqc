@@ -26,12 +26,17 @@ def index(args):
     log.info("STAR=v{}".format(star.get_version()))
     log.args(args)
 
-    idx = Index(args.organism, args.ids, args.folder)
-    idx.create_index(
-        s3_location=args.upload_prefix,
-        ensemble_release=args.ensemble_release,
-        read_length=args.read_length,
-        valid_biotypes=args.valid_biotypes
-    )
+    with ec2.instance_clean_up(
+        email=args.email, upload=args.upload_prefix, log_name=args.log_name,
+        debug=args.debug, terminate=args.terminate, running_remote=args.remote
+    ):
+
+        idx = Index(args.organism, args.ids, args.folder)
+        idx.create_index(
+            s3_location=args.upload_prefix,
+            ensemble_release=args.ensemble_release,
+            read_length=args.read_length,
+            valid_biotypes=args.valid_biotypes
+        )
 
     log.info("DONE.")
