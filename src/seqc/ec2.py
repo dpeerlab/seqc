@@ -269,7 +269,7 @@ class AWSInstance(object):
             specification['MinCount'] = specification['MaxCount'] = 1
             instance = self.ec2.create_instances(**specification)[0]
             self.instance_id = instance.id
-            log.notify('instance %s created, waiting until running' %
+            log.notify('Instance %s created, waiting until running' %
                        self.instance_id)
             instance.wait_until_running()
             log.notify('instance %s in running state' % self.instance_id)
@@ -359,14 +359,14 @@ class AWSInstance(object):
 
             self.mount_volume(ssh)
 
-            log.notify('setting aws credentials.')
+            log.notify('Setting aws credentials.')
             self.set_credentials(ssh)
 
             # use the local SEQC package (.tar.gz) to update the remote instance
             # this will overwrite whatever SEQC version exists in the remote instance
             if self.remote_update:
 
-                log.notify('uploading local SEQC installation to remote instance.')
+                log.notify('Uploading local SEQC installation to remote instance.')
                 seqc_distribution = os.path.expanduser('~/.seqc/seqc.tar.gz')
                 ssh.execute('mkdir -p software/seqc')
                 ssh.put_file(seqc_distribution, 'software/seqc.tar.gz')
@@ -411,7 +411,7 @@ class AWSInstance(object):
                 log.notify("Unable to retrieve SEQC version.")
 
             log.notify('SEQC setup complete.')
-            log.notify('instance login: %s' % ssh.obscure_login_command())
+            log.notify('Instance login: %s' % ssh.obscure_login_command())
 
     def start(self):
         self.setup_seqc()
@@ -723,7 +723,7 @@ class SSHConnection:
         )
 
     def __enter__(self):
-        log.notify('connecting to instance %s via ssh' % self.instance_id)
+        log.notify('Connecting to instance %s via ssh' % self.instance_id)
         self.connect()
         return self
 
