@@ -39,10 +39,10 @@ def index(args):
             valid_biotypes=args.valid_biotypes
         )
 
-        # upload the log file (seqc_log.txt, nohup.log)
+        # upload the log file (seqc_log.txt, nohup.log, Log.out)
         if args.upload_prefix:
             bucket, key = io.S3.split_link(args.upload_prefix)
-            for item in [args.log_name, "./nohup.log"]:
+            for item in [args.log_name, "./nohup.log", "./Log.out"]:
                 try:
                     ec2.Retry(retries=5)(io.S3.upload_file)(
                         item, bucket, key
