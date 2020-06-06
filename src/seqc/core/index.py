@@ -9,7 +9,7 @@ def index(args):
     # functions to be pickled and run remotely must import all their own modules
     import sys
     import logging
-    from seqc import ec2, log
+    from seqc import ec2, log, io
     from seqc.sequence.index import Index
     from seqc.alignment import star
     from seqc import version
@@ -38,5 +38,17 @@ def index(args):
             read_length=args.read_length,
             valid_biotypes=args.valid_biotypes
         )
+
+        # upload the log file (seqc_log.txt, nohup.log)
+        if args.upload_prefix:
+            bucket, key = io.S3.split_link(args.upload_prefix)
+            for item in [args.log_name, "./nohup.log"]:
+                try:
+                    ec2.Retry(retries=5)(io.S3.upload_file)(
+                        item, bucket, key
+                    )
+                    log.info("Successfully uploaded {} to the specified S3 location {}".format(item, args.upload_prefix))
+                except FileNotFoundError:
+                    log.notify("Item {} was not found! Continuing with upload...".format(item))
 
     log.info("DONE.")
