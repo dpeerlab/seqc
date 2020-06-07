@@ -65,6 +65,9 @@ class Index:
         # todo type checks
         self.index_folder_name = index_folder_name
 
+        if self.index_folder_name != '.':
+            os.makedirs(os.path.join(self.index_folder_name, self.organism), exist_ok=True)
+
     @property
     def organism(self) -> str:
         return self._organism
@@ -120,7 +123,7 @@ class Index:
             if f.endswith(search_pattern):
                 return f
 
-        raise Exception("Unable to find *.{}".format(search_pattern)
+        raise FileNotFoundError("Unable to find *.{}".format(search_pattern)
     )
 
     @staticmethod
@@ -168,7 +171,7 @@ class Index:
         ensembl_gtf_filename = self._identify_gtf_file(ftp.nlst(), release_num)
 
         log.info("GTF Ensemble Release {}".format(release_num))
-        log.info("ftp://{}{}/{}".format(ftp.host, work_dir, ensembl_gtf_filename))
+        log.info("ftp://{}{}".format(ftp.host, os.path.join(work_dir, ensembl_gtf_filename)))
 
         with open(download_name, 'wb') as f:
             ftp.retrbinary('RETR %s' % ensembl_gtf_filename, f.write)
@@ -254,25 +257,34 @@ class Index:
         valid_biotypes = set(valid_biotypes)
 
         if gtf_file is None:
-            gtf_file = '%s/%s.gtf.gz' % (self.index_folder_name, self.organism)
+            gtf_file = os.path.join(self.index_folder_name, "{}.gtf.gz".format(self.organism))
         if conversion_file is None:
-            conversion_file = '%s/%s_ids.csv' % (self.index_folder_name, self.organism)
+            conversion_file = os.path.join(self.index_folder_name, "{}_ids.csv".format(self.organism))
         if truncated_annotation is None:
-            truncated_annotation = '%s/%s_multiconsortia.gtf' % (
-                self.index_folder_name, self.organism)
+            truncated_annotation = os.path.join(self.index_folder_name,  self.organism, "annotations.gtf")
 
         # extract valid ensembl ids from the conversion file
         c = pd.read_csv(conversion_file, index_col=[0])
-        valid_ensembl_ids = set(c[np.any(~c.isnull().values, axis=1)].index)
+
+        if c.shape[1] == 1:
+            # index == ensembl_gene_id & col 1 == hgnc_symbol
+            valid_ensembl_ids = set(c[np.any(~c.isnull().values, axis=1)].index)
+        elif c.shape[1] == 0:
+            # index == ensembl_gene_id & no columns
+            # set to none to take all IDs
+            valid_ensembl_ids = None
+        else:
+            raise Exception("Not implemented/supported shape={}".format(c.shape))
 
         # remove any invalid ids from the annotation file
         gr = gtf.Reader(gtf_file)
         with open(truncated_annotation, 'wt') as f:
             for line_fields in gr:
                 record = gtf.Record(line_fields)
-                if (record.attribute('gene_id') in valid_ensembl_ids and
-                        record.attribute('gene_biotype') in valid_biotypes):
-                    f.write("\t".join(line_fields))
+                # include only biotypes of interest
+                if record.attribute('gene_biotype') in valid_biotypes:
+                    if (valid_ensembl_ids is None) or (record.attribute('gene_id') in valid_ensembl_ids):
+                        f.write("\t".join(line_fields))
 
     def _create_star_index(
         self,
@@ -290,16 +302,15 @@ class Index:
         :return:
         """
         if fasta_file is None:
-            fasta_file = '%s/%s.fa.gz' % (self.index_folder_name, self.organism)
+            fasta_file = os.path.join(self.index_folder_name, "{}.fa.gz".format(self.organism))
         if gtf_file is None:
-            if os.path.isfile('%s/%s_multiconsortia.gtf' % (
-                    self.index_folder_name, self.organism)):
-                gtf_file = '%s/%s_multiconsortia.gtf' % (
-                    self.index_folder_name, self.organism)
+            if os.path.isfile(os.path.join(self.index_folder_name, self.organism, "annotations.gtf")):
+                gtf_file = os.path.join(self.index_folder_name, self.organism, "annotations.gtf")
             else:
-                gtf_file = '%s/%s.gtf.gz' % (self.index_folder_name, self.organism)
+                gtf_file = os.path.join(self.index_folder_name, "{}.gtf.gz".format(self.organism))
         if genome_dir is None:
-            genome_dir = '%s/%s' % (self.index_folder_name, self.organism)
+            genome_dir = os.path.join(self.index_folder_name, self.organism)
+
         star.create_index(fasta_file, gtf_file, genome_dir, read_length)
 
     @staticmethod
@@ -331,8 +342,6 @@ class Index:
         :param s3_location: optional, s3 location to upload the index to.
         :return:
         """
-        if self.index_folder_name != '.':
-            os.makedirs(self.index_folder_name, exist_ok=True)
 
         log.info("Downloading Ensemble files...")
         self._download_ensembl_files(ensemble_release)
