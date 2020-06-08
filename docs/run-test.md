@@ -19,7 +19,7 @@ nose2 -s src/seqc test_index
 Besides the nose2 test results, actual SEQC output files can be found here, for example:
 
 ```
-s3://dp-lab-test/seqc/index-ciona_intestinalis-0d19e818-7623-4a1d-bac3-a8c9e3be1e3e/
+s3://dp-lab-cicd/seqc/index-ciona_intestinalis-0d19e818-7623-4a1d-bac3-a8c9e3be1e3e/
 ```
 
 ## SEQC run
@@ -37,5 +37,5 @@ nose2 -s src/seqc test_run_e2e.TestRunRemote
 Besides the nose2 test results, actual SEQC output files can be found here, for example:
 
 ```
-s3://dp-lab-test/seqc/run-in_drop_v2-a997b408-f883-4ba2-9941-8b541e319850/
+s3://dp-lab-cicd/seqc/run-in_drop_v2-a997b408-f883-4ba2-9941-8b541e319850/
 ```
