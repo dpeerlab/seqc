@@ -49,5 +49,6 @@ pip install nose
 ## Install Packages for Linting and Formating
 
 ```bash
+pip install autopep8
 pip install black
 ```
