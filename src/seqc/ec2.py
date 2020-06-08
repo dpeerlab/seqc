@@ -257,7 +257,7 @@ class AWSInstance(object):
         instance = self.ec2.Instance(id=instance_id)
         if not instance.state['Name'] == 'running':
             raise InstanceNotRunningError
-        log.notify('instance %s in running state' % instance_id)
+        log.notify('Instance %s in running state' % instance_id)
 
     def create_instance(self) -> None:
         if self.instance_id is not None:
@@ -272,7 +272,7 @@ class AWSInstance(object):
             log.notify('Instance %s created, waiting until running' %
                        self.instance_id)
             instance.wait_until_running()
-            log.notify('instance %s in running state' % self.instance_id)
+            log.notify('Instance %s in running state' % self.instance_id)
 
     @staticmethod
     def mount_volume(ssh, directory='/home/ec2-user'):
@@ -481,15 +481,15 @@ class AWSInstance(object):
             LaunchSpecification=self.launch_specification())
         sir_id = response['SpotInstanceRequests'][0]['SpotInstanceRequestId']
         log.notify(
-            'spot instance requested (%s), waiting for bid to be accepted.' % sir_id)
+            'Spot instance requested (%s), waiting for bid to be accepted.' % sir_id)
         self.instance_id = self.verify_spot_bid_fulfilled(sir_id)
         if self.instance_id is None:
             raise InstanceNotRunningError(
-                'spot bid of %f was not fulfilled, please try a higher bid or ')
-        log.notify('spot bid accepted, waiting for instance (id=%s) to attain running '
+                'Spot bid of %f was not fulfilled, please try a higher bid or ')
+        log.notify('Spot bid accepted, waiting for instance (id=%s) to attain running '
                    'state.' % self.instance_id)
         self.ec2.Instance(self.instance_id).wait_until_running()
-        log.notify('spot instance (id=%s) in running state' % self.instance_id)
+        log.notify('Spot instance (id=%s) in running state' % self.instance_id)
 
     def __enter__(self):
         try:
