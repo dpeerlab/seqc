@@ -22,7 +22,7 @@ def clean_up_security_groups():
     )  # get security groups associated with instances
     unused_sgs = all_sgs - all_inst_sgs  # get ones without instance association
 
-    if len(unused_sgs) >= 300:
+    if len(unused_sgs) >= 100:
         print("Cleaning up the unused security groups:")
         client = boto3.client("ec2")
         for g in unused_sgs:
