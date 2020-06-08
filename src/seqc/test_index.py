@@ -1,4 +1,6 @@
 import os
+import shutil
+import uuid
 import unittest
 import gzip
 import pandas as pd
@@ -6,21 +8,203 @@ import numpy as np
 import ftplib
 import nose2
 from nose2.tools import params
-from seqc.sequence import index, gtf
 import seqc
-import shutil
+from seqc.sequence import index, gtf
+from seqc import io
 
 
 # fill and uncomment these variables to avoid having to provide input to tests
 TEST_BUCKET = "dp-lab-test/seqc"
 
+def expected_output_files():
 
-class TestUnorganized(unittest.TestCase):
+    files = set(
+        [
+            "Genome",
+            "SA",
+            "SAindex",
+            "annotations.gtf",
+            "chrLength.txt",
+            "chrName.txt",
+            "chrNameLength.txt",
+            "chrStart.txt",
+            "exonGeTrInfo.tab",
+            "exonInfo.tab",
+            "geneInfo.tab",
+            "genomeParameters.txt",
+            "sjdbInfo.txt",
+            "sjdbList.fromGTF.out.tab",
+            "sjdbList.out.tab",
+            "transcriptInfo.tab",
+        ]
+    )
+
+    return files
+
+
+class TestIndexRemote(unittest.TestCase):
+
+    s3_bucket = "dp-lab-test"
 
     @classmethod
     def setUp(cls):
-        import uuid
-        cls.outdir = os.path.join(os.environ['TMPDIR'], "seqc-test", str(uuid.uuid4()))
+        cls.test_id = str(uuid.uuid4())
+        cls.outdir = os.path.join(os.environ['TMPDIR'], "seqc-test", cls.test_id)
+        os.makedirs(cls.outdir, exist_ok=True)
+
+    @classmethod
+    def tearDown(self):
+        if os.path.isdir(self.outdir):
+            shutil.rmtree(self.outdir, ignore_errors=True)
+
+    def test_upload_star_index_correctly_places_index_on_s3(self):
+        organism = 'ciona_intestinalis'
+        # must end with a slash
+        test_folder = f"seqc/index-{organism}-{self.test_id}/"
+
+        idx = index.Index(
+            organism,
+            ['external_gene_name'],
+            index_folder_name=self.outdir
+        )
+        index_directory = os.path.join(self.outdir, organism) + '/'
+        idx._download_ensembl_files(ensemble_release=None)
+        idx._subset_genes()
+        idx._create_star_index()
+        idx._upload_index(index_directory, f"s3://{self.s3_bucket}/{test_folder}")
+
+        # check files generated in S3
+        files = io.S3.listdir(self.s3_bucket, test_folder)
+
+        # extract only filenames (i.e. remove directory hierarchy)
+        # convert to a set for easy comparison
+        files = set(map(lambda filename: filename.replace(test_folder, ""), files))
+
+        # check for the exact same filenames
+        self.assertSetEqual(files, expected_output_files())
+
+    def test_create_index_produces_and_uploads_an_index(self):
+        organism = 'ciona_intestinalis'
+        # must end with a slash
+        test_folder = f"seqc/index-{organism}-{self.test_id}/"
+
+        idx = index.Index(
+            organism,
+            ['external_gene_name'],
+            index_folder_name=self.outdir
+        )
+        idx.create_index(
+            s3_location=f"s3://{self.s3_bucket}/{test_folder}",
+            ensemble_release=None,
+            read_length=101
+        )
+
+        # check files generated in S3
+        files = io.S3.listdir(self.s3_bucket, test_folder)
+
+        # extract only filenames (i.e. remove directory hierarchy)
+        # convert to a set for easy comparison
+        files = set(map(lambda filename: filename.replace(test_folder, ""), files))
+
+        # check for the exact same filenames
+        self.assertSetEqual(files, expected_output_files())
+
+
+class MyUnitTest(unittest.TestCase):
+
+    @classmethod
+    def setUp(cls):
+        pass
+
+    @classmethod
+    def tearDown(self):
+        pass
+
+    def test_Index_raises_ValueError_when_organism_is_not_provided(self):
+        self.assertRaises(ValueError, index.Index, organism='', additional_id_types=[])
+
+    def test_Index_raises_ValueError_when_organism_isnt_lower_case(self):
+        self.assertRaises(ValueError, index.Index, organism='Homo_sapiens',
+                          additional_id_types=[])
+        self.assertRaises(ValueError, index.Index, organism='Homo_Sapiens',
+                          additional_id_types=[])
+        self.assertRaises(ValueError, index.Index, organism='hoMO_Sapiens',
+                          additional_id_types=[])
+
+    def test_Index_raises_ValueError_when_organism_has_no_underscore(self):
+        self.assertRaises(ValueError, index.Index, organism='homosapiens',
+                          additional_id_types=[])
+
+    def test_Index_raises_TypeError_when_additional_id_fields_is_not_correct_type(self):
+        self.assertRaises(TypeError, index.Index, organism='homo_sapiens',
+                          additional_id_types='not_an_array_tuple_or_list')
+        self.assertRaises(TypeError, index.Index, organism='homo_sapiens',
+                          additional_id_types='')
+
+    def test_False_evaluating_additional_id_fields_are_accepted_but_set_empty_list(self):
+        idx = index.Index('homo_sapiens', [])
+        self.assertEqual(idx.additional_id_types, [])
+        idx = index.Index('homo_sapiens', tuple())
+        self.assertEqual(idx.additional_id_types, [])
+        idx = index.Index('homo_sapiens', np.array([]))
+        self.assertEqual(idx.additional_id_types, [])
+
+    def test_converter_xml_contains_one_attribute_line_per_gene_list(self):
+        idx = index.Index('homo_sapiens', ['hgnc_symbol', 'mgi_symbol'])
+        self.assertEqual(idx._converter_xml.count('Attribute name'), 3)
+        idx = index.Index('homo_sapiens', [])
+        self.assertEqual(idx._converter_xml.count('Attribute name'), 1)
+
+    def test_converter_xml_formats_genome_as_first_initial_plus_species(self):
+        idx = index.Index('homo_sapiens', ['hgnc_symbol', 'mgi_symbol'])
+        self.assertIn('hsapiens', idx._converter_xml)
+        idx = index.Index('mus_musculus')
+        self.assertIn('mmusculus', idx._converter_xml)
+
+    def test_identify_gtf_file_should_return_correct_file(self):
+
+        files = [
+            "CHECKSUMS",
+            "Homo_sapiens.GRCh38.86.abinitio.gtf.gz",
+            "Homo_sapiens.GRCh38.86.chr.gtf.gz",
+            "Homo_sapiens.GRCh38.85.chr.gtf.gz",
+            "Homo_sapiens.GRCh38.86.chr_patch_hapl_scaff.gtf.gz",
+            "Homo_sapiens.GRCh38.86.gtf.gz",
+            "README"
+        ]
+        release_num = 86
+
+        filename = index.Index._identify_gtf_file(files, release_num)
+
+        self.assertEqual(filename, "Homo_sapiens.GRCh38.86.chr.gtf.gz")
+
+    def test_identify_gtf_file_should_throw_exception(self):
+
+        files = [
+            "CHECKSUMS",
+            "Homo_sapiens.GRCh38.86.abinitio.gtf.gz",
+            "Homo_sapiens.GRCh38.86.chr_patch_hapl_scaff.gtf.gz",
+            "Homo_sapiens.GRCh38.86.gtf.gz",
+            "README"
+        ]
+        release_num = 86
+
+        self.assertRaises(
+            FileNotFoundError,
+            index.Index._identify_gtf_file,
+            files=files,
+            release_num=release_num
+        )
+
+
+class TestUnorganized(unittest.TestCase):
+
+    s3_bucket = "dp-lab-test"
+
+    @classmethod
+    def setUp(cls):
+        cls.test_id = str(uuid.uuid4())
+        cls.outdir = os.path.join(os.environ['TMPDIR'], "seqc-test", cls.test_id)
         os.makedirs(cls.outdir, exist_ok=True)
 
     @classmethod
@@ -202,129 +386,6 @@ class TestUnorganized(unittest.TestCase):
             )
         )
         self.assertTrue(os.path.isfile(expected_file))
-
-    def test_upload_star_index_correctly_places_index_on_s3(self):
-        if 'TEST_BUCKET' in globals():
-            bucket = globals()['TEST_BUCKET']
-        else:
-            bucket = input('please provide an amazon s3 bucket to upload test results: ')
-        organism = 'ciona_intestinalis'
-        idx = index.Index(
-            organism,
-            ['external_gene_name'],
-            index_folder_name=self.outdir
-        )
-        index_directory = os.path.join(self.outdir, organism) + '/'
-        idx._download_ensembl_files(ensemble_release=None)
-        idx._subset_genes()
-        idx._create_star_index()
-        idx._upload_index(index_directory, 's3://%s/genomes/ciona_intestinalis/' % bucket)
-        # fixme:
-        # add assertion. either actually check s3 or get a return value from the upload_index method
-
-    def test_create_index_produces_and_uploads_an_index(self):
-        if 'TEST_BUCKET' in globals():
-            bucket = globals()['TEST_BUCKET']
-        else:
-            bucket = input('please provide an amazon s3 bucket to upload test results: ')
-        organism = 'ciona_intestinalis'
-        idx = index.Index(
-            organism,
-            ['external_gene_name'],
-            index_folder_name=self.outdir
-        )
-        idx.create_index(
-            s3_location='s3://%s/genomes/%s/' % (bucket, idx.organism),
-            ensemble_release=None,
-            read_length=100
-        )
-
-
-class MyUnitTest(unittest.TestCase):
-
-    @classmethod
-    def setUp(cls):
-        pass
-
-    @classmethod
-    def tearDown(self):
-        pass
-
-    def test_Index_raises_ValueError_when_organism_is_not_provided(self):
-        self.assertRaises(ValueError, index.Index, organism='', additional_id_types=[])
-
-    def test_Index_raises_ValueError_when_organism_isnt_lower_case(self):
-        self.assertRaises(ValueError, index.Index, organism='Homo_sapiens',
-                          additional_id_types=[])
-        self.assertRaises(ValueError, index.Index, organism='Homo_Sapiens',
-                          additional_id_types=[])
-        self.assertRaises(ValueError, index.Index, organism='hoMO_Sapiens',
-                          additional_id_types=[])
-
-    def test_Index_raises_ValueError_when_organism_has_no_underscore(self):
-        self.assertRaises(ValueError, index.Index, organism='homosapiens',
-                          additional_id_types=[])
-
-    def test_Index_raises_TypeError_when_additional_id_fields_is_not_correct_type(self):
-        self.assertRaises(TypeError, index.Index, organism='homo_sapiens',
-                          additional_id_types='not_an_array_tuple_or_list')
-        self.assertRaises(TypeError, index.Index, organism='homo_sapiens',
-                          additional_id_types='')
-
-    def test_False_evaluating_additional_id_fields_are_accepted_but_set_empty_list(self):
-        idx = index.Index('homo_sapiens', [])
-        self.assertEqual(idx.additional_id_types, [])
-        idx = index.Index('homo_sapiens', tuple())
-        self.assertEqual(idx.additional_id_types, [])
-        idx = index.Index('homo_sapiens', np.array([]))
-        self.assertEqual(idx.additional_id_types, [])
-
-    def test_converter_xml_contains_one_attribute_line_per_gene_list(self):
-        idx = index.Index('homo_sapiens', ['hgnc_symbol', 'mgi_symbol'])
-        self.assertEqual(idx._converter_xml.count('Attribute name'), 3)
-        idx = index.Index('homo_sapiens', [])
-        self.assertEqual(idx._converter_xml.count('Attribute name'), 1)
-
-    def test_converter_xml_formats_genome_as_first_initial_plus_species(self):
-        idx = index.Index('homo_sapiens', ['hgnc_symbol', 'mgi_symbol'])
-        self.assertIn('hsapiens', idx._converter_xml)
-        idx = index.Index('mus_musculus')
-        self.assertIn('mmusculus', idx._converter_xml)
-
-    def test_identify_gtf_file_should_return_correct_file(self):
-
-        files = [
-            "CHECKSUMS",
-            "Homo_sapiens.GRCh38.86.abinitio.gtf.gz",
-            "Homo_sapiens.GRCh38.86.chr.gtf.gz",
-            "Homo_sapiens.GRCh38.85.chr.gtf.gz",
-            "Homo_sapiens.GRCh38.86.chr_patch_hapl_scaff.gtf.gz",
-            "Homo_sapiens.GRCh38.86.gtf.gz",
-            "README"
-        ]
-        release_num = 86
-
-        filename = index.Index._identify_gtf_file(files, release_num)
-
-        self.assertEqual(filename, "Homo_sapiens.GRCh38.86.chr.gtf.gz")
-
-    def test_identify_gtf_file_should_throw_exception(self):
-
-        files = [
-            "CHECKSUMS",
-            "Homo_sapiens.GRCh38.86.abinitio.gtf.gz",
-            "Homo_sapiens.GRCh38.86.chr_patch_hapl_scaff.gtf.gz",
-            "Homo_sapiens.GRCh38.86.gtf.gz",
-            "README"
-        ]
-        release_num = 86
-
-        self.assertRaises(
-            FileNotFoundError,
-            index.Index._identify_gtf_file,
-            files=files,
-            release_num=release_num
-        )
 
 
 #########################################################################################
