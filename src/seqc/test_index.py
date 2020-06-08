@@ -14,7 +14,7 @@ from seqc import io
 
 
 # fill and uncomment these variables to avoid having to provide input to tests
-TEST_BUCKET = "dp-lab-test/seqc"
+TEST_BUCKET = "dp-lab-cicd/seqc"
 
 def expected_output_files():
 
@@ -44,7 +44,7 @@ def expected_output_files():
 
 class TestIndexRemote(unittest.TestCase):
 
-    s3_bucket = "dp-lab-test"
+    s3_bucket = "dp-lab-cicd"
 
     @classmethod
     def setUp(cls):
@@ -199,7 +199,7 @@ class MyUnitTest(unittest.TestCase):
 
 class TestUnorganized(unittest.TestCase):
 
-    s3_bucket = "dp-lab-test"
+    s3_bucket = "dp-lab-cicd"
 
     @classmethod
     def setUp(cls):
