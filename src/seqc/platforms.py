@@ -26,6 +26,7 @@ class AbstractPlatform:
         self._filter_lonely_triplets = filter_lonely_triplets
         self._filter_low_count = filter_low_count
 
+    @staticmethod
     def factory(type):
         if type == "in_drop":
             return in_drop()
