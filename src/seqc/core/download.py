@@ -11,13 +11,14 @@ def s3_data(files_or_links, output_prefix):
     """
     files = []
     for f in files_or_links:
-        if not f.startswith('s3://'):
-            if f.endswith('/'):
+        if not f.startswith("s3://"):
+            if f.endswith("/"):
                 files.extend(f + subfile for subfile in os.listdir(f))
             else:
                 files.append(f)
         else:
-            recursive = True if f.endswith('/') else False
-            files.extend(io.S3.download(f, output_prefix, overwrite=True,
-                                        recursive=recursive))
+            recursive = True if f.endswith("/") else False
+            files.extend(
+                io.S3.download(f, output_prefix, overwrite=True, recursive=recursive)
+            )
     return files
