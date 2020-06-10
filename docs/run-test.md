@@ -24,14 +24,26 @@ s3://dp-lab-cicd/seqc/index-ciona_intestinalis-0d19e818-7623-4a1d-bac3-a8c9e3be1
 
 ## SEQC run
 
-This will generate a package that can be uploaded to EC2 for testing:
+### Local
+
+SEQC will run with `--local`.
+
+```bash
+nose2 -s src/seqc test_run_e2e_local
+```
+
+### Remote
+
+SEQC will run on AWS.
+
+The following will generate a package that can be uploaded to AWS EC2 for testing:
 
 ```bash
 python repackage.py
 ```
 
 ```bash
-nose2 -s src/seqc test_run_e2e.TestRunRemote
+nose2 -s src/seqc test_run_e2e_remote
 ```
 
 Besides the nose2 test results, actual SEQC output files can be found here, for example:
