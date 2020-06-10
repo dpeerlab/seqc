@@ -21,12 +21,7 @@ def get_instance_by_test_id(test_id):
 
     ec2 = boto3.resource("ec2")
     instances = ec2.instances.filter(
-        Filters=[
-            {
-                "Name": "tag:TestID",
-                "Values": [test_id]
-            }
-        ]
+        Filters=[{"Name": "tag:TestID", "Values": [test_id]}]
     )
     instances = list(instances)
 
@@ -55,23 +50,21 @@ def expected_output_files(output_prefix):
             f"{output_prefix}_sparse_molecule_counts.mtx",
             f"{output_prefix}_sparse_read_counts.mtx",
             f"{output_prefix}_summary.tar.gz",
-            f"seqc_log.txt"
+            f"seqc_log.txt",
         ]
     )
 
     return files
 
+
 def expected_output_files_run_from_merged(output_prefix):
 
     files = expected_output_files(output_prefix)
 
-    excludes = set(
-        [
-            f"{output_prefix}_merged.fastq.gz"
-        ]
-    )
+    excludes = set([f"{output_prefix}_merged.fastq.gz"])
 
     return files - excludes
+
 
 def expected_output_files_run_from_bam(output_prefix):
 
@@ -81,7 +74,7 @@ def expected_output_files_run_from_bam(output_prefix):
         [
             f"{output_prefix}_Aligned.out.bam",
             f"{output_prefix}_alignment_summary.txt",
-            f"{output_prefix}_merged.fastq.gz"
+            f"{output_prefix}_merged.fastq.gz",
         ]
     )
 
@@ -108,9 +101,7 @@ def check_for_success_msg(s3_seqc_log_uri, path_temp):
 
     # download seqc_log.txt
     io.S3.download(
-        link=s3_seqc_log_uri,
-        prefix=path_temp,
-        overwrite=True, recursive=False
+        link=s3_seqc_log_uri, prefix=path_temp, overwrite=True, recursive=False
     )
 
     # check if seqc_log.txt has a successful message
@@ -132,7 +123,9 @@ class TestRunRemote(unittest.TestCase):
     @classmethod
     def setUp(cls):
         cls.test_id = str(uuid.uuid4())
-        cls.path_temp = os.path.join(os.environ['TMPDIR'], "seqc-test", str(uuid.uuid4()))
+        cls.path_temp = os.path.join(
+            os.environ["TMPDIR"], "seqc-test", str(uuid.uuid4())
+        )
         os.makedirs(cls.path_temp, exist_ok=True)
 
     @classmethod
@@ -148,19 +141,19 @@ class TestRunRemote(unittest.TestCase):
 
         params = [
             ("run", platform),
-            ("-o", "from-raw-fastq"),
-            ("-u", f"s3://{self.s3_bucket}/{test_folder}"),
-            ("-i", INDEX),
-            ("-e", self.email),
-            ("-b", BARCODE_FASTQ % platform),
-            ("-g", GENOMIC_FASTQ % platform),
+            ("--output-prefix", "from-raw-fastq"),
+            ("--upload-prefix", f"s3://{self.s3_bucket}/{test_folder}"),
+            ("--index", INDEX),
+            ("--email", self.email),
+            ("--barcode-fastq", BARCODE_FASTQ % platform),
+            ("--genomic-fastq", GENOMIC_FASTQ % platform),
             ("--instance-type", "c4.large"),
             ("--spot-bid", "1.0"),
-            ("-k", self.rsa_key),
+            ("--rsa-key", self.rsa_key),
             ("--debug",),
             ("--remote-update",),
             ("--ami-id", self.ami_id),
-            ("--user-tags", f"TestID:{self.test_id}")
+            ("--user-tags", f"TestID:{self.test_id}"),
         ]
 
         argv = [element for tupl in params for element in tupl]
@@ -172,22 +165,22 @@ class TestRunRemote(unittest.TestCase):
 
         # wait until terminated
         # get output file list
-        files = get_output_file_list(
-            self.test_id,
-            self.s3_bucket,
-            test_folder
-        )
+        files = get_output_file_list(self.test_id, self.s3_bucket, test_folder)
 
         # check for the exact same filenames
         self.assertSetEqual(files, expected_output_files(output_prefix))
 
         # check for success message in seqc_log.txt
         has_success_msg = check_for_success_msg(
-            s3_seqc_log_uri="s3://{}/{}".format(self.s3_bucket, os.path.join(test_folder, "seqc_log.txt")),
-            path_temp=self.path_temp
+            s3_seqc_log_uri="s3://{}/{}".format(
+                self.s3_bucket, os.path.join(test_folder, "seqc_log.txt")
+            ),
+            path_temp=self.path_temp,
         )
 
-        self.assertTrue(has_success_msg, msg="Unable to find the success message in the log")
+        self.assertTrue(
+            has_success_msg, msg="Unable to find the success message in the log"
+        )
 
     def test_remote_from_merged(self, platform="in_drop_v2"):
         output_prefix = "from-merged"
@@ -196,12 +189,12 @@ class TestRunRemote(unittest.TestCase):
 
         params = [
             ("run", platform),
-            ("-o", output_prefix),
-            ("-u", f"s3://{self.s3_bucket}/{test_folder}"),
-            ("-i", INDEX),
-            ("-e", self.email),
+            ("--output-prefix", output_prefix),
+            ("--upload-prefix", f"s3://{self.s3_bucket}/{test_folder}"),
+            ("--index", INDEX),
+            ("--email", self.email),
             ("-m", MERGED % (platform, platform)),
-            ("-k", self.rsa_key),
+            ("--rsa-key", self.rsa_key),
             ("--instance-type", "c4.large"),
             ("--ami-id", self.ami_id),
             ("--remote-update",),
@@ -218,22 +211,22 @@ class TestRunRemote(unittest.TestCase):
 
         # wait until terminated
         # get output file list
-        files = get_output_file_list(
-            self.test_id,
-            self.s3_bucket,
-            test_folder
-        )
+        files = get_output_file_list(self.test_id, self.s3_bucket, test_folder)
 
         # check for the exact same filenames
         self.assertSetEqual(files, expected_output_files_run_from_merged(output_prefix))
 
         # check for success message in seqc_log.txt
         has_success_msg = check_for_success_msg(
-            s3_seqc_log_uri="s3://{}/{}".format(self.s3_bucket, os.path.join(test_folder, "seqc_log.txt")),
-            path_temp=self.path_temp
+            s3_seqc_log_uri="s3://{}/{}".format(
+                self.s3_bucket, os.path.join(test_folder, "seqc_log.txt")
+            ),
+            path_temp=self.path_temp,
         )
 
-        self.assertTrue(has_success_msg, msg="Unable to find the success message in the log")
+        self.assertTrue(
+            has_success_msg, msg="Unable to find the success message in the log"
+        )
 
     def test_remote_from_bamfile(self, platform="in_drop_v2"):
         output_prefix = "from-bamfile"
@@ -242,12 +235,12 @@ class TestRunRemote(unittest.TestCase):
 
         params = [
             ("run", platform),
-            ("-o", output_prefix),
-            ("-u", f"s3://{self.s3_bucket}/{test_folder}"),
-            ("-i", INDEX),
-            ("-e", self.email),
+            ("--output-prefix", output_prefix),
+            ("--upload-prefix", f"s3://{self.s3_bucket}/{test_folder}"),
+            ("--index", INDEX),
+            ("--email", self.email),
             ("-a", BAMFILE % platform),
-            ("-k", self.rsa_key),
+            ("--rsa-key", self.rsa_key),
             ("--instance-type", "r5.2xlarge"),
             ("--debug",),
             ("--ami-id", self.ami_id),
@@ -265,19 +258,19 @@ class TestRunRemote(unittest.TestCase):
 
         # wait until terminated
         # get output file list
-        files = get_output_file_list(
-            self.test_id,
-            self.s3_bucket,
-            test_folder
-        )
+        files = get_output_file_list(self.test_id, self.s3_bucket, test_folder)
 
         # check for the exact same filenames
         self.assertSetEqual(files, expected_output_files_run_from_bam(output_prefix))
 
         # check for success message in seqc_log.txt
         has_success_msg = check_for_success_msg(
-            s3_seqc_log_uri="s3://{}/{}".format(self.s3_bucket, os.path.join(test_folder, "seqc_log.txt")),
-            path_temp=self.path_temp
+            s3_seqc_log_uri="s3://{}/{}".format(
+                self.s3_bucket, os.path.join(test_folder, "seqc_log.txt")
+            ),
+            path_temp=self.path_temp,
         )
 
-        self.assertTrue(has_success_msg, msg="Unable to find the success message in the log")
+        self.assertTrue(
+            has_success_msg, msg="Unable to find the success message in the log"
+        )
