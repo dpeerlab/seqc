@@ -18,7 +18,7 @@ dataset_local = TestDataset(
     barcode_fastq="test-data/datasets/%s/barcode/",  # platform
     genomic_fastq="test-data/datasets/%s/genomic/",  # platform
     merged_fastq=None,
-    bam="test-data/datasets/Aligned.out.bam",
+    bam="test-data/datasets/%s/Aligned.out.bam",  # platform
     index="test-data/datasets/genomes/hg38_chr19/",
     barcodes="test-data/datasets/barcodes/%s/flat/",  # platform
 )
