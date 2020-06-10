@@ -7,14 +7,7 @@ from seqc.core import main
 from seqc import io
 import boto3
 from nose2.tools import params
-
-# define some constants for testing
-BARCODE_FASTQ = "s3://seqc-public/test/%s/barcode/"  # platform
-GENOMIC_FASTQ = "s3://seqc-public/test/%s/genomic/"  # platform
-MERGED = "s3://seqc-public/test/%s/%s_merged.fastq.gz"  # platform, platform
-BAMFILE = "s3://seqc-public/test/%s/Aligned.out.bam"  # platform
-INDEX = "s3://seqc-public/genomes/hg38_chr19/"
-PLATFORM_BARCODES = "s3://seqc-public/barcodes/%s/flat/"  # platform
+from test_dataset import dataset_s3
 
 
 def get_instance_by_test_id(test_id):
@@ -143,10 +136,10 @@ class TestRunRemote(unittest.TestCase):
             ("run", platform),
             ("--output-prefix", "from-raw-fastq"),
             ("--upload-prefix", f"s3://{self.s3_bucket}/{test_folder}"),
-            ("--index", INDEX),
+            ("--index", dataset_s3.index),
             ("--email", self.email),
-            ("--barcode-fastq", BARCODE_FASTQ % platform),
-            ("--genomic-fastq", GENOMIC_FASTQ % platform),
+            ("--barcode-fastq", dataset_s3.barcode_fastq % platform),
+            ("--genomic-fastq", dataset_s3.genomic_fastq % platform),
             ("--instance-type", "c4.large"),
             ("--spot-bid", "1.0"),
             ("--rsa-key", self.rsa_key),
@@ -159,7 +152,7 @@ class TestRunRemote(unittest.TestCase):
         argv = [element for tupl in params for element in tupl]
 
         if platform != "drop_seq":
-            argv += ["--barcode-files", PLATFORM_BARCODES % platform]
+            argv += ["--barcode-files", dataset_s3.barcodes % platform]
 
         main.main(argv)
 
@@ -191,9 +184,9 @@ class TestRunRemote(unittest.TestCase):
             ("run", platform),
             ("--output-prefix", output_prefix),
             ("--upload-prefix", f"s3://{self.s3_bucket}/{test_folder}"),
-            ("--index", INDEX),
+            ("--index", dataset_s3.index),
             ("--email", self.email),
-            ("-m", MERGED % (platform, platform)),
+            ("--merged-fastq", dataset_s3.merged_fastq % (platform, platform)),
             ("--rsa-key", self.rsa_key),
             ("--instance-type", "c4.large"),
             ("--ami-id", self.ami_id),
@@ -205,7 +198,7 @@ class TestRunRemote(unittest.TestCase):
         argv = [element for tupl in params for element in tupl]
 
         if platform != "drop_seq":
-            argv += ["--barcode-files", PLATFORM_BARCODES % platform]
+            argv += ["--barcode-files", dataset_s3.barcodes % platform]
 
         main.main(argv)
 
@@ -237,9 +230,9 @@ class TestRunRemote(unittest.TestCase):
             ("run", platform),
             ("--output-prefix", output_prefix),
             ("--upload-prefix", f"s3://{self.s3_bucket}/{test_folder}"),
-            ("--index", INDEX),
+            ("--index", dataset_s3.index),
             ("--email", self.email),
-            ("-a", BAMFILE % platform),
+            ("--alignment-file", dataset_s3.bam % platform),
             ("--rsa-key", self.rsa_key),
             ("--instance-type", "r5.2xlarge"),
             ("--debug",),
@@ -252,7 +245,7 @@ class TestRunRemote(unittest.TestCase):
         argv = [element for tupl in params for element in tupl]
 
         if platform != "drop_seq":
-            argv += ["--barcode-files", PLATFORM_BARCODES % platform]
+            argv += ["--barcode-files", dataset_s3.barcodes % platform]
 
         main.main(argv)
 
