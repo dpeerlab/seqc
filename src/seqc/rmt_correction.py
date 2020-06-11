@@ -74,16 +74,13 @@ def in_drop(read_array, error_rate, alpha=0.05):
     :param alpha: Tolerance for errors
     """
 
-    global ra
-    global indices_grouped_by_cells
-
     ra = read_array
     indices_grouped_by_cells = ra.group_indices_by_cell()
-    _correct_errors(error_rate, alpha)
+    _correct_errors(ra, indices_grouped_by_cells, error_rate, alpha)
 
 
 # a method called by each process to correct RMT for each cell
-def _correct_errors_by_cell_group(err_rate, p_value, cell_index):
+def _correct_errors_by_cell_group( ra, indices_grouped_by_cells, err_rate, p_value, cell_index):
 
     cell_group = indices_grouped_by_cells[cell_index]
     # Breaks for each gene
@@ -129,11 +126,11 @@ def _correct_errors_by_cell_group(err_rate, p_value, cell_index):
                 expected_errors += donor_count * p_dtr
 
                 # Check if jaitin correction is feasible
-                if not jaitin_corrected: 
+                if not jaitin_corrected:
                     ref_positions = ra.positions[rmt_groups[rmt]]
                     donor_positions = ra.positions[rmt_groups[donor_rmt]]
 
-                    # Is reference a subset of the donor ? 
+                    # Is reference a subset of the donor ?
                     if (set(ref_positions)).issubset(donor_positions):
                         jaitin_corrected = True
                         jaitin_donor = donor_rmt
@@ -154,16 +151,24 @@ def _correct_errors_by_cell_group(err_rate, p_value, cell_index):
     return res
 
 
-def _correct_errors(err_rate, p_value=0.05):
-    #Calculate and correct errors in RMTs
+def _correct_errors(ra, indices_grouped_by_cells, err_rate, p_value=0.05):
+    # calculate and correct errors in RMTs
     with multi.Pool(processes=multi.cpu_count()) as p:
-        p = multi.Pool(processes=multi.cpu_count())
-        results = p.starmap(_correct_errors_by_cell_group, 
-                          zip(repeat(err_rate), repeat(p_value), range(len(indices_grouped_by_cells))))
-        p.close()
-        p.join()
+        # p = multi.Pool(processes=multi.cpu_count())
+        results = p.starmap(
+            _correct_errors_by_cell_group,
+            zip(
+                repeat(ra),
+                repeat(indices_grouped_by_cells),
+                repeat(err_rate),
+                repeat(p_value),
+                range(len(indices_grouped_by_cells))
+            )
+        )
+        # p.close()
+        # p.join()
 
-        # iterate through the list of returned read indices and donor rmts 
+        # iterate through the list of returned read indices and donor rmts
         for i in range(len(results)):
             res = results[i]
             if len(res) > 0:
