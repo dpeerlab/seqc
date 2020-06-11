@@ -98,22 +98,22 @@ class Section:
         :param str filename: html file name for this section
         :return cls: Section containing initial filtering results
         """
-        # todo replace whitespace characters with html equiv, add space b/w lines
+
         description = (
-            'Initial filters are run over the sam file while our ReadArray database is '
+            '<p>Initial filters are run over the sam file while our ReadArray database is '
             'being constructed. These filters indicate heuristic reasons why reads '
-            'should be omitted from downstream operations:<br><br>'
-            '<b>no gene</b>: Regardless of the read\'s genomic alignment status, there was no '
-            'transcriptomic alignment for this read.<br>'
-            '<b>gene not unique</b>: this indicates that more than one alignment was recovered '
-            'for this read. We attempt to resolve these multi-alignments downstream. <br>'
-            '<b>primer missing</b>: This is an in-drop specific filter, it indices that the '
+            'should be omitted from downstream operations:</p>'
+            '<ul><li><b>no gene</b>: Regardless of the read\'s genomic alignment status, there was no '
+            'transcriptomic alignment for this read.</li>'
+            '<li><b>gene not unique</b>: This indicates that more than one alignment was recovered '
+            'for this read. We attempt to resolve these multi-alignments downstream.</li>'
+            '<li><b>primer missing</b>: This is an in-drop specific filter, it indices that the '
             'spacer sequence could not be identified, and thus neither a cell barcode '
-            'nor an rmt were recorded for this read.<br>'
-            '<b>low poly t</b>: the primer did not display enough t-sequence in the primer '
+            'nor an rmt were recorded for this read.</li>'
+            '<li><b>low poly t</b>: The primer did not display enough t-sequence in the primer '
             'tail, where these nucleotides are expected. This indicates an increased '
             'probability that this primer randomly primed, instead of hybridizing with '
-            'the poly-a tail of an mRNA molecule.')
+            'the poly-a tail of an mRNA molecule.</li></ul>')
         description_section = TextContent(description)
 
         # Get counts
@@ -209,10 +209,23 @@ class Section:
         :param str filename: html file name for this section
         :return:
         """
-        description = 'description for cell filtering'  # todo implement
+        description = [
+            "Top Left: Cells whose molecule counts are below the inflection point of an ecdf constructed from cell molecule counts",
+            "Top Right: Fits a two-component gaussian mixture model to the data. If a component is found to fit a low-coverage fraction of the data, this fraction is set as invalid.",
+            "Bottom Left: Sets any cell with a fraction of mitochondrial mRNA greater than 20% to invalid.",
+            "Bottom Right: Fits a linear model to the relationship between number of genes detected and number of molecules detected. Cells with a lower than expected number of detected genes are set as invalid."
+        ]
+
+        description = list(map(lambda text: f"<li>{text}</li>", description))
+        description = "<ul>" + "".join(description) + "</ul>"
         description_section = TextContent(description)
-        image_legend = 'image legend'  # todo implement
-        image_section = ImageContent(figure_path, 'cell filtering figure', image_legend)
+        image_legend = "Cell Filtering"
+        # use basename in the HTML file
+        image_section = ImageContent(
+            os.path.basename(figure_path),
+            'cell filtering figure',
+            image_legend
+        )
         return cls(
             'Cell Filtering',
             {'Description': description_section, 'Results': image_section},
@@ -229,6 +242,7 @@ class Section:
         :param pd.DataFrame counts_matrix:
         :return:
         """
+        # use full path to generate an image
         plot.Diagnostics.cell_size_histogram(counts_matrix, save=figure_path)
 
         # Number of cells and molecule count distributions
@@ -239,7 +253,12 @@ class Section:
             image_legend += '{}th percentile: {}<br>'.format(prctile, np.percentile(ms, prctile))
         image_legend += "Max number of molecules: {}<br>".format(ms.max())
 
-        image_section = ImageContent(figure_path, 'cell size figure', image_legend)
+        # use basename in the HTML file
+        image_section = ImageContent(
+            os.path.basename(figure_path),
+            'cell size figure',
+            image_legend
+        )
         return cls('Cell Summary',
                    {'Library Size Distribution': image_section},
                    filename)
@@ -320,26 +339,33 @@ class Summary:
 
     def compress_archive(self):
         root_dir, _, base_dir = self.archive_name.rpartition('/')
+        if root_dir == "":
+            # make_archive doesn't like an empty string, should be None
+            root_dir = None
         shutil.make_archive(
-            self.archive_name, 'gztar', root_dir, base_dir)
+            self.archive_name, 'gztar', root_dir, base_dir
+        )
         return self.archive_name + '.tar.gz'
 
 
 class MiniSummary:
-    def __init__(self, output_prefix, mini_summary_d, alignment_summary_file, filter_fig, cellsize_fig):
+    def __init__(self, output_dir, output_prefix, mini_summary_d, alignment_summary_file, filter_fig, cellsize_fig):
         """
         :param mini_summary_d: dictionary containing output parameters
         :param count_mat: count matrix after filtered
         :param filter_fig: filtering figure
         :param cellsize_fig: cell size figure
         """
+        self.output_dir = output_dir
         self.output_prefix = output_prefix
         self.mini_summary_d = mini_summary_d
         self.alignment_summary_file = alignment_summary_file
+
+        # use the full path for figures
         self.filter_fig = filter_fig
         self.cellsize_fig = cellsize_fig
-        self.pca_fig = output_prefix+"_pca.png"
-        self.tsne_and_phenograph_fig = output_prefix+"_phenograph.png"
+        self.pca_fig = os.path.join(output_dir, output_prefix + "_pca.png")
+        self.tsne_and_phenograph_fig = os.path.join(output_dir, output_prefix + "_phenograph.png")
 
     def compute_summary_fields(self, read_array, count_mat):
         self.count_mat = pd.DataFrame(count_mat)
@@ -444,16 +470,33 @@ class MiniSummary:
 
         env = Environment(loader=PackageLoader('seqc.summary', 'templates'))
         section_template = env.get_template('mini_summary_base.html')
-        rendered_section = section_template.render(output_prefix = self.output_prefix, warning_d = warning_d,
-                                                   mini_summary_d = self.mini_summary_d, cellsize_fig = self.cellsize_fig,
-                                                   pca_fig = self.pca_fig, filter_fig = self.filter_fig,
-                                                   tsne_and_phenograph_fig = self.tsne_and_phenograph_fig)
-        with open(self.output_prefix + "_mini_summary.html", 'w') as f:
+
+        # use the basename (i.e. not full path) when rendering figures
+        rendered_section = section_template.render(
+            output_prefix = self.output_prefix,
+            warning_d = warning_d,
+            mini_summary_d = self.mini_summary_d,
+            cellsize_fig = os.path.basename(self.cellsize_fig),
+            pca_fig = os.path.basename(self.pca_fig),
+            filter_fig = os.path.basename(self.filter_fig),
+            tsne_and_phenograph_fig = os.path.basename(self.tsne_and_phenograph_fig)
+        )
+
+        # construct path for mini summary in HTML, JSON, and PDF
+        path_mini_html = os.path.join(self.output_dir, self.output_prefix + "_mini_summary.html")
+        path_mini_json = os.path.join(self.output_dir, self.output_prefix + "_mini_summary.json")
+        path_mini_pdf = os.path.join(self.output_dir, self.output_prefix + "_mini_summary.pdf")
+
+        # save html
+        with open(path_mini_html, 'w') as f:
             f.write(rendered_section)
 
-        HTML(self.output_prefix + "_mini_summary.html").write_pdf(self.output_prefix + "_mini_summary.pdf")
+        # save pdf
+        HTML(path_mini_html).write_pdf(path_mini_pdf)
 
-        with open(self.output_prefix + "_mini_summary.json","w") as f:
+        # save json
+        with open(path_mini_json, "w") as f:
             json.dump(self.mini_summary_d, f)
 
-        return self.output_prefix + "_mini_summary.json", self.output_prefix + "_mini_summary.pdf"
+        # return path to mini summary in JSON & PDF
+        return path_mini_json, path_mini_pdf
