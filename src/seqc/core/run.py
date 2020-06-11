@@ -26,13 +26,14 @@ def run(args) -> None:
     import numpy as np
     import scipy.io
     from shutil import copyfile
+    from shutil import move as movefile
     from seqc.summary.summary import MiniSummary
     from seqc.stats.mast import run_mast
     import logging
-    logger = logging.getLogger('weasyprint')
-    logger.handlers = []  # Remove the default stderr handler
-    logger.setLevel(100)
-    logger.addHandler(logging.FileHandler('weasyprint.log'))
+    # logger = logging.getLogger('weasyprint')
+    # logger.handlers = []  # Remove the default stderr handler
+    # logger.setLevel(100)
+    # logger.addHandler(logging.FileHandler('weasyprint.log'))
 
     def determine_start_point(arguments) -> (bool, bool, bool):
         """
@@ -64,7 +65,8 @@ def run(args) -> None:
             arguments.barcode_fastq, arguments.genomic_fastq = io.BaseSpace.download(
                 arguments.platform, arguments.basespace, dir_, arguments.basespace_token)
 
-        # check for remote fastq file links
+        # get a list of input FASTQ files
+        # download from AWS S3 if the URI is prefixed with s3://
         arguments.genomic_fastq = download.s3_data(
             arguments.genomic_fastq, dir_ + '/genomic_fastq/')
         arguments.barcode_fastq = download.s3_data(
@@ -75,25 +77,34 @@ def run(args) -> None:
             download.s3_data([arguments.merged_fastq], dir_ + '/')[0] if
             arguments.merged_fastq is not None else None)
 
-        # check if the index must be downloaded
+        # get a path to the STAR index files
+        # download from AWS S3 if the URI is prefixed with s3://
         if any((arguments.alignment_file, arguments.read_array)):
             index_link = arguments.index + 'annotations.gtf'
         else:
             index_link = arguments.index
-        download.s3_data([index_link], dir_ + '/index/')
-        arguments.index = dir_ + '/index/'
+        index_files = download.s3_data([index_link], dir_ + '/index/')
+        # use the first filename in the list to get the index directory
+        # add a trailing slash to make the rest of the code not break;;
+        # e.g. test-data/index/chrStart.txt --> test-data/index/
+        arguments.index = os.path.dirname(index_files[0]) + "/"
 
-        # check if barcode files must be downloaded
+        # get a list of whitelisted barcodes files
+        # download from AWS S3 if the URI is prefixed with s3://
         arguments.barcode_files = download.s3_data(
             arguments.barcode_files, dir_ + '/barcodes/')
 
-        # check if alignment_file needs downloading
+        # check if `alignment_file` is specified
         if arguments.alignment_file:
+            # get the alignment filename (*.bam)
+            # download from AWS S3 if the URI is prefixed with s3://
             arguments.alignment_file = download.s3_data(
                 [arguments.alignment_file], dir_ + '/')[0]
 
-        # check if readarray needs downloading
+        # check if `read_array` is specified
         if arguments.read_array:
+            # get the readarray fileanem (*.h5)
+            # download from AWS S3 if the URI is prefixed with s3://
             arguments.read_array = download.s3_data([arguments.read_array], dir_ + '/')[0]
 
         return arguments
@@ -121,9 +132,9 @@ def run(args) -> None:
             barcode=barcode_fastq)
 
         # delete genomic/barcode fastq files after merged.fastq creation
-        log.info('Removing original fastq file for memory management.')
-        delete_fastq = ' '.join(['rm'] + genomic_fastq + barcode_fastq)
-        io.ProcessManager(delete_fastq).run_all()
+        # log.info('Removing original fastq file for memory management.')
+        # delete_fastq = ' '.join(['rm'] + genomic_fastq + barcode_fastq)
+        # io.ProcessManager(delete_fastq).run_all()
 
         return merged_fastq
 
@@ -155,26 +166,28 @@ def run(args) -> None:
             merged_fastq, star_index, n_proc, alignment_directory,
             **star_kwargs)
 
-        if aws_upload_key:
-            log.info('Gzipping merged fastq file.')
-            if pigz:
-                pigz_zip = "pigz --best -k -f {fname}".format(fname=merged_fastq)
-            else:
-                pigz_zip = "gzip -kf {fname}".format(fname=merged_fastq)
-            pigz_proc = io.ProcessManager(pigz_zip)
-            pigz_proc.run_all()
-            pigz_proc.wait_until_complete()  # prevents slowing down STAR alignment
-            merged_fastq += '.gz'  # reflect gzipped nature of file
+        log.info('Gzipping merged fastq file.')
+        if pigz:
+            pigz_zip = "pigz --best -k -f {fname}".format(fname=merged_fastq)
+        else:
+            pigz_zip = "gzip -kf {fname}".format(fname=merged_fastq)
+        pigz_proc = io.ProcessManager(pigz_zip)
+        pigz_proc.run_all()
+        pigz_proc.wait_until_complete()  # prevents slowing down STAR alignment
+        # delete (now that we have .gz file)
+        io.ProcessManager(f"rm {merged_fastq}").run_all()
+        merged_fastq += '.gz'  # reflect gzipped nature of file
 
+        if aws_upload_key:
             log.info('Uploading gzipped merged fastq file to S3.')
             merge_upload = 'aws s3 mv {fname} {s3link}'.format(
                 fname=merged_fastq, s3link=aws_upload_key)
             upload_manager = io.ProcessManager(merge_upload)
             upload_manager.run_all()
         else:
-            log.info('Removing merged fastq file for memory management.')
-            rm_merged = 'rm %s' % merged_fastq
-            io.ProcessManager(rm_merged).run_all()
+        #     log.info('Removing merged fastq file for memory management.')
+        #     rm_merged = 'rm %s' % merged_fastq
+        #     io.ProcessManager(rm_merged).run_all()
 
             upload_manager = None
         return bamfile, upload_manager
@@ -206,9 +219,10 @@ def run(args) -> None:
             upload_manager = io.ProcessManager(upload_bam)
             upload_manager.run_all()
         else:
-            log.info('Removing bamfile for memory management.')
-            rm_bamfile = 'rm %s' % bamfile
-            io.ProcessManager(rm_bamfile).run_all()
+            movefile(bamfile, args.output_prefix + "_Aligned.out.bam")
+        #     log.info('Removing bamfile for memory management.')
+        #     rm_bamfile = 'rm %s' % bamfile
+        #     io.ProcessManager(rm_bamfile).run_all()
             upload_manager = None
         return read_array, upload_manager
 
@@ -257,9 +271,15 @@ def run(args) -> None:
 
         log.args(args)
 
+        # e.g.
+        # --output-prefix=test-data/_outs/test
+        # output_dir=test-data
+        # output_prefix=test
         output_dir, output_prefix = os.path.split(args.output_prefix)
         if not output_dir:
             output_dir = '.'
+        else:
+            os.makedirs(output_dir, exist_ok=True)
 
         # check if the platform name provided is supported by seqc
         # todo move into verify for run
@@ -396,32 +416,37 @@ def run(args) -> None:
         # get alignment summary
         if os.path.isfile(output_dir + '/alignments/Log.final.out'):
             os.rename(output_dir + '/alignments/Log.final.out',
-                      output_dir + '/' + args.output_prefix + '_alignment_summary.txt')
+                      args.output_prefix + '_alignment_summary.txt')
 
             # Upload files and summary sections
-            files += [output_dir + '/' + args.output_prefix + '_alignment_summary.txt']
+            files += [args.output_prefix + '_alignment_summary.txt']
             sections.insert(
                 0, Section.from_alignment_summary(
-                    output_dir + '/' + args.output_prefix + '_alignment_summary.txt',
+                    args.output_prefix + '_alignment_summary.txt',
                     'alignment_summary.html'))
 
-        cell_size_figure = 'cell_size_distribution.png'
+        cell_size_figure = args.output_prefix + '_cell_size_distribution.png'
         index_section = Section.from_final_matrix(
             sp_csv, cell_size_figure, 'cell_distribution.html')
         seqc_summary = Summary(
-            output_dir + '/' + args.output_prefix + '_summary', sections, index_section)
+            args.output_prefix + '_summary', sections, index_section)
         seqc_summary.prepare_archive()
         seqc_summary.import_image(cell_filter_figure)
         seqc_summary.import_image(cell_size_figure)
         seqc_summary.render()
+
+        # create a .tar.gz with `test_summary/*`
         summary_archive = seqc_summary.compress_archive()
         files += [summary_archive]
 
         # Create a mini summary section
-        alignment_summary_file = output_dir + '/' + args.output_prefix + '_alignment_summary.txt'
+        alignment_summary_file = args.output_prefix + '_alignment_summary.txt'
         seqc_mini_summary = MiniSummary(
-            args.output_prefix, mini_summary_d, alignment_summary_file, cell_filter_figure,
-            cell_size_figure)
+            output_dir, output_prefix,
+            mini_summary_d, alignment_summary_file,
+            cell_filter_figure,
+            cell_size_figure
+        )
         seqc_mini_summary.compute_summary_fields(ra, sp_csv)
         seqc_mini_summary_json, seqc_mini_summary_pdf = seqc_mini_summary.render()
         files += [seqc_mini_summary_json, seqc_mini_summary_pdf]
@@ -464,7 +489,7 @@ def run(args) -> None:
 
         # upload logs
         if args.upload_prefix:
-            # Upload count matrices files, logs, and return
+            # upload logs (seqc_log.txt, nohup.log)
             bucket, key = io.S3.split_link(args.upload_prefix)
             for item in [args.log_name, './nohup.log']:
                 try:
@@ -477,6 +502,9 @@ def run(args) -> None:
                              '"%s".' % (item, args.upload_prefix))
                 except FileNotFoundError:
                     log.notify('Item %s was not found! Continuing with upload...' % item)
+        else:
+            # move the log to output directory
+            movefile(args.log_name, args.output_prefix + "_" + args.log_name)
 
         # todo local test does not send this email
         if mutt:
