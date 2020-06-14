@@ -250,11 +250,6 @@ class Index:
         :param truncated_annotation: name for the generated output file
         :param list(str) valid_biotypes: only accept genes of this biotype.
         """
-        if not (self.additional_id_types or valid_biotypes):  # nothing to be done
-            return
-
-        # change to set for efficiency
-        valid_biotypes = set(valid_biotypes)
 
         if gtf_file is None:
             gtf_file = os.path.join(self.index_folder_name, "{}.gtf.gz".format(self.organism))
@@ -262,6 +257,20 @@ class Index:
             conversion_file = os.path.join(self.index_folder_name, "{}_ids.csv".format(self.organism))
         if truncated_annotation is None:
             truncated_annotation = os.path.join(self.index_folder_name,  self.organism, "annotations.gtf")
+
+        if not (self.additional_id_types or valid_biotypes):  # nothing to be done
+            # no need to truncate the annotation file
+            # let's just make a copy of the original file so that it can be added to the final output directory
+            cmd = (
+                "gunzip -c {} > {}".format(gtf_file, truncated_annotation)
+            )
+            err = check_call(cmd, shell=True)
+            if err:
+                raise ChildProcessError('conversion file download failed: %s' % err)
+            return
+
+        # change to set for efficiency
+        valid_biotypes = set(valid_biotypes)
 
         # extract valid ensembl ids from the conversion file
         c = pd.read_csv(conversion_file, index_col=[0])
