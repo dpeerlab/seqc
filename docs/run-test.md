@@ -7,7 +7,7 @@ Set the following environment variables:
 ```bash
 export SEQC_TEST_RSA_KEY=/Users/chunj/dpeerlab-chunj.pem
 export SEQC_TEST_EMAIL=jaeyoung.chun@gmail.com
-export SEQC_TEST_AMI_ID=ami-07d15d7b3bb78506d
+export SEQC_TEST_AMI_ID=ami-037cc8c1417e197c1
 ```
 
 For local test, download test data in S3 to your test machine:
@@ -18,10 +18,18 @@ aws s3 sync s3://seqc-public/barcodes/ten_x_v2/ ./test-data/datasets/barcodes/te
 aws s3 sync s3://seqc-public/genomes/hg38_chr19/ ./test-data/datasets/genomes/hg38_chr19/
 ```
 
+## Test Everything
+
+Runs tests based on `nose2.cfg`:
+
+```bash
+nose2
+```
+
 ## SEQC index
 
 ```bash
-nose2 -s src/seqc test_index
+nose2 -s src/seqc/tests test_index
 ```
 
 Besides the nose2 test results, actual SEQC output files can be found here, for example:
@@ -37,7 +45,7 @@ s3://dp-lab-cicd/seqc/index-ciona_intestinalis-0d19e818-7623-4a1d-bac3-a8c9e3be1
 SEQC will run with `--local`.
 
 ```bash
-nose2 -s src/seqc test_run_e2e_local
+nose2 -s src/seqc/tests test_run_e2e_local
 ```
 
 ### Remote
@@ -51,7 +59,7 @@ python repackage.py
 ```
 
 ```bash
-nose2 -s src/seqc test_run_e2e_remote
+nose2 -s src/seqc/tests test_run_e2e_remote
 ```
 
 Besides the nose2 test results, actual SEQC output files can be found here, for example:
