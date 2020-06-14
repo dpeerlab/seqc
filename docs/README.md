@@ -38,5 +38,5 @@ SEQC index \
     --read-length 101 \
     --upload-prefix s3://dp-lab-test/seqc/index/86/ \
     --rsa-key ~/dpeerlab-chunj.pem \
-    --ami-id ami-07d15d7b3bb78506d
+    --ami-id ami-037cc8c1417e197c1
 ```
