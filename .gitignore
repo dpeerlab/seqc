@@ -11,3 +11,5 @@ dist/*
 .pydevproject
 .c9/
 test-data/
+dask-worker-space/
+
