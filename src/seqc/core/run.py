@@ -339,7 +339,9 @@ def run(args) -> None:
 
             # Correct barcodes
             log.info('Correcting barcodes and estimating error rates.')
-            error_rate = platform.apply_barcode_correction(ra, args.barcode_files)
+            error_rate, df_cb_correction = platform.apply_barcode_correction(ra, args.barcode_files)
+            if df_cb_correction is not None and len(df_cb_correction) > 0:
+                df_cb_correction.to_csv(args.output_prefix + "_cb-correction.csv.gz", index=False, compression="gzip")
 
             # Resolve multimapping
             log.info('Resolving ambiguous alignments.')
@@ -347,7 +349,9 @@ def run(args) -> None:
 
             # correct errors
             log.info('Identifying RMT errors.')
-            platform.apply_rmt_correction(ra, error_rate)
+            df_umi_correction = platform.apply_rmt_correction(ra, error_rate)
+            if df_umi_correction is not None and len(df_umi_correction) > 0:
+                df_umi_correction.to_csv(args.output_prefix + "_umi-correction.csv.gz", index=False, compression="gzip")
 
             # Apply low coverage filter
             if platform.filter_lonely_triplets:
