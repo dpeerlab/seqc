@@ -1,4 +1,3 @@
-from scipy.special import gammainc
 from seqc.sequence.encodings import DNA3Bit
 import numpy as np
 from seqc import log
@@ -6,10 +5,6 @@ from seqc.read_array import ReadArray
 import time
 import pandas as pd
 import multiprocessing as multi
-from itertools import repeat
-import ctypes
-from contextlib import closing
-from functools import partial
 
 # todo document me
 def generate_close_seq(seq):
@@ -23,8 +18,11 @@ def generate_close_seq(seq):
     for i in range(l):
         mask = 0b111 << (i * 3)
         cur_chr = (seq & mask) >> (i * 3)
-        res += [seq & (~mask) | (new_chr << (i * 3))
-                for new_chr in DNA3Bit.bin2strdict.keys() if new_chr != cur_chr]
+        res += [
+            seq & (~mask) | (new_chr << (i * 3))
+            for new_chr in DNA3Bit.bin2strdict.keys()
+            if new_chr != cur_chr
+        ]
     # generate all sequences that are dist 2
     for i in range(l):
         mask_i = 0b111 << (i * 3)
@@ -33,9 +31,13 @@ def generate_close_seq(seq):
             mask_j = 0b111 << (j * 3)
             chr_j = (seq & mask_j) >> (j * 3)
             mask = mask_i | mask_j
-            res += [seq & (~mask) | (new_chr_i << (i * 3)) | (new_chr_j << (j * 3)) for
-                    new_chr_i in DNA3Bit.bin2strdict.keys() if new_chr_i != chr_i for
-                    new_chr_j in DNA3Bit.bin2strdict.keys() if new_chr_j != chr_j]
+            res += [
+                seq & (~mask) | (new_chr_i << (i * 3)) | (new_chr_j << (j * 3))
+                for new_chr_i in DNA3Bit.bin2strdict.keys()
+                if new_chr_i != chr_i
+                for new_chr_j in DNA3Bit.bin2strdict.keys()
+                if new_chr_j != chr_j
+            ]
 
     return res
 
@@ -57,7 +59,7 @@ def probability_for_convert_d_to_r(d_seq, r_seq, err_rate):
     p = 1.0
     while d_seq > 0:
         if d_seq & 0b111 != r_seq & 0b111:
-            if isinstance(err_rate,float):
+            if isinstance(err_rate, float):
                 p *= err_rate
             else:
                 p *= err_rate[(d_seq & 0b111, r_seq & 0b111)]
@@ -74,15 +76,15 @@ def in_drop(read_array, error_rate, alpha=0.05):
     :param alpha: Tolerance for errors
     """
 
-    ra = read_array
-    indices_grouped_by_cells = ra.group_indices_by_cell()
-    _correct_errors(ra, indices_grouped_by_cells, error_rate, alpha)
+    return _correct_errors(read_array, error_rate, alpha)
 
 
 # a method called by each process to correct RMT for each cell
-def _correct_errors_by_cell_group( ra, indices_grouped_by_cells, err_rate, p_value, cell_index):
+def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
 
-    cell_group = indices_grouped_by_cells[cell_index]
+    from scipy.special import gammainc
+
+    # cell_group = indices_grouped_by_cells[cell_index]
     # Breaks for each gene
     gene_inds = cell_group[np.argsort(ra.genes[cell_group])]
     breaks = np.where(np.diff(ra.genes[gene_inds]))[0] + 1
@@ -93,7 +95,7 @@ def _correct_errors_by_cell_group( ra, indices_grouped_by_cells, err_rate, p_val
     for inds in splits:
         # RMT groups
         for ind in inds:
-            rmt = ra.data['rmt'][ind]
+            rmt = ra.data["rmt"][ind]
             try:
                 rmt_groups[rmt].append(ind)
             except KeyError:
@@ -143,35 +145,80 @@ def _correct_errors_by_cell_group( ra, indices_grouped_by_cells, err_rate, p_val
                 # Save the RMT donor
                 # save the index of the read and index of donor rmt read
                 for i in rmt_groups[rmt]:
-                    res.append(i)
-                    res.append(rmt_groups[jaitin_donor][0])
+                    res.append((i, rmt_groups[jaitin_donor][0]))
 
         rmt_groups.clear()
 
     return res
 
 
-def _correct_errors(ra, indices_grouped_by_cells, err_rate, p_value=0.05):
-    # calculate and correct errors in RMTs
-    with multi.Pool(processes=multi.cpu_count()) as p:
-        # p = multi.Pool(processes=multi.cpu_count())
-        results = p.starmap(
-            _correct_errors_by_cell_group,
-            zip(
-                repeat(ra),
-                repeat(indices_grouped_by_cells),
-                repeat(err_rate),
-                repeat(p_value),
-                range(len(indices_grouped_by_cells))
-            )
-        )
-        # p.close()
-        # p.join()
+def _correct_errors(ra, err_rate, p_value=0.05):
 
-        # iterate through the list of returned read indices and donor rmts
-        for i in range(len(results)):
-            res = results[i]
-            if len(res) > 0:
-                for i in range(0, len(res), 2):
-                    ra.data['rmt'][res[i]] = ra.data['rmt'][res[i+1]]
-                    ra.data['status'][res[i]] |= ra.filter_codes['rmt_error']
+    from tqdm import tqdm
+    from distributed import Client
+    from dask.distributed import wait
+
+    # set up dask distributed with # of cpu - 1
+    client = Client(n_workers=max(multi.cpu_count() - 1, 1))
+
+    print("Dask Dashboard:", client.dashboard_link)
+
+    # group by cells (same cell barcodes as one group)
+    indices_grouped_by_cells = ra.group_indices_by_cell()
+
+    # send readarray in advance to all workers (i.e. broadcast=True)
+    # this way, we reduce the serialization time
+    [future_ra] = client.scatter([ra], broadcast=True)
+
+    # correct errors per cell group in parallel
+    futures = []
+    for cell_index in tqdm(range(len(indices_grouped_by_cells))):
+        future = client.submit(
+            _correct_errors_by_cell_group,
+            future_ra,
+            indices_grouped_by_cells[cell_index],
+            err_rate,
+            p_value,
+        )
+        futures.append(future)
+
+    # wait until all done
+    completed, not_completed = wait(futures)
+
+    # gather the resutls
+    results = []
+    for res in tqdm(completed):
+        results.append(res.result())
+
+    # clean up
+    for future in tqdm(futures):
+        future.cancel()
+
+    del futures
+
+    client.shutdown()
+
+    # iterate through the list of returned read indices and donor rmts
+    mapping = []
+    for i in range(len(results)):
+        res = results[i]
+        if len(res) == 0:
+            continue
+        for idx, idx_corrected_rmt in res:
+
+            # record pre-/post-correction
+            mapping.append(
+                (
+                    ra.data["cell"][idx],
+                    ra.data["rmt"][idx],
+                    ra.data["rmt"][idx_corrected_rmt],
+                )
+            )
+
+            # correct
+            ra.data["rmt"][idx] = ra.data["rmt"][idx_corrected_rmt]
+
+            # report error
+            ra.data["status"][idx] |= ra.filter_codes["rmt_error"]
+
+    return pd.DataFrame(mapping, columns=["CB", "UR", "UB"])
