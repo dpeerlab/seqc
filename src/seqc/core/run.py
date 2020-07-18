@@ -411,6 +411,11 @@ def run(args) -> None:
                  args.output_prefix + '_sparse_counts_barcodes.csv',
                  args.output_prefix + '_sparse_counts_genes.csv']
 
+        if os.path.exists(args.output_prefix + "_cb-correction.csv.gz"):
+            files.append(args.output_prefix + "_cb-correction.csv.gz")
+        if os.path.exists(args.output_prefix + "_umi-correction.csv.gz"):
+            files.append(args.output_prefix + "_umi-correction.csv.gz")
+
         # Summary sections
         # create the sections for the summary object
         sections += [
