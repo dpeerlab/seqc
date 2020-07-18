@@ -219,7 +219,8 @@ def run(args) -> None:
             upload_manager = io.ProcessManager(upload_bam)
             upload_manager.run_all()
         else:
-            movefile(bamfile, args.output_prefix + "_Aligned.out.bam")
+            if os.path.exists(bamfile):
+                movefile(bamfile, args.output_prefix + "_Aligned.out.bam")
         #     log.info('Removing bamfile for memory management.')
         #     rm_bamfile = 'rm %s' % bamfile
         #     io.ProcessManager(rm_bamfile).run_all()
@@ -320,6 +321,8 @@ def run(args) -> None:
             manage_merged = None
 
         if process_bamfile:
+            # if the starting point was a BAM file (i.e. args.alignment_file=*.bam & align=False)
+            # do not upload by setting this to None
             upload_bamfile = args.upload_prefix if align else None
 
             ra, manage_bamfile, = create_read_array(
