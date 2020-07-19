@@ -29,5 +29,5 @@ scikit_learn>=0.17
 tqdm
 dask>=2.20.0
 distributed>=2.20.0
-PhenoGraph@https://github.com/dpeerlab/PhenoGraph/archive/v1.5.2.tar.gz
+PhenoGraph>=1.5.6
 magic@https://github.com/dpeerlab/magic/archive/v0.1.1.tar.gz
