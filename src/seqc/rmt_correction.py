@@ -159,7 +159,12 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     from dask.distributed import wait
 
     # set up dask distributed with # of cpu - 1
-    client = Client(n_workers=max(multi.cpu_count() - 1, 1))
+    client = Client(
+        name="rmt-correction",
+        n_workers=max(multi.cpu_count() - 1, 1),
+        set_as_default=False,
+        dashboard_address="0.0.0.0:9000",
+    )
 
     print("Dask Dashboard:", client.dashboard_link)
 
@@ -197,6 +202,7 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     del futures
 
     client.shutdown()
+    client.close()
 
     # iterate through the list of returned read indices and donor rmts
     mapping = []
