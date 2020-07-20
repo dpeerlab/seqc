@@ -125,7 +125,7 @@ class S3:
         :param recursive:
         :return list: all downloaded filenames
         """
-        if prefix is '':
+        if prefix == '':
             prefix = './'
 
         if overwrite is False:
