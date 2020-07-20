@@ -9,7 +9,7 @@ paramiko>=2.0.2
 regex
 requests
 nose2
-scipy>=0.14.0
+scipy==1.4.1
 boto3
 intervaltree
 matplotlib
