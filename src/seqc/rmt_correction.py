@@ -152,54 +152,81 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
     return res
 
 
+def _correct_errors_by_cell_group_chunks(ra, cell_group_chunks, err_rate, p_value):
+    return [
+        _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value)
+        for cell_group in cell_group_chunks
+    ]
+
+
 def _correct_errors(ra, err_rate, p_value=0.05):
 
     from tqdm import tqdm
-    from distributed import Client
-    from dask.distributed import wait
+    import dask
+    from distributed import Client, LocalCluster
+    from dask.distributed import wait, performance_report
+    from tlz import partition_all
 
-    # set up dask distributed with # of cpu - 1
-    client = Client(
-        name="rmt-correction",
-        n_workers=max(multi.cpu_count() - 1, 1),
-        set_as_default=False,
-        dashboard_address="0.0.0.0:9000",
-    )
+    # configure dask.distributed
+    # use total number of available CPUs - 1
+    # memory_terminate_fraction doesn't work for some reason
+    # https://github.com/dask/distributed/issues/3519
+    worker_kwargs = {
+        "n_workers": max(multi.cpu_count() - 1, 1),
+        "memory_limit": "16G",
+        "memory_target_fraction": 0.8,
+        "memory_spill_fraction": 0.9,
+        "memory_pause_fraction": False,
+        # "memory_terminate_fraction": False,
+    }
 
+    # do not kill worker at 95% memory level
+    dask.config.set({"distributed.worker.memory.terminate": False})
+    dask.config.set({"distributed.scheduler.allowed-failures": 50})
+
+    cluster = LocalCluster(dashboard_address="0.0.0.0:9000", **worker_kwargs)
+    client = Client(cluster)
+
+    print(client)
     print("Dask Dashboard:", client.dashboard_link)
 
     # group by cells (same cell barcodes as one group)
+    print("Grouping...")
     indices_grouped_by_cells = ra.group_indices_by_cell()
 
     # send readarray in advance to all workers (i.e. broadcast=True)
     # this way, we reduce the serialization time
+    print("Scattering ReadArray...")
     [future_ra] = client.scatter([ra], broadcast=True)
 
     # correct errors per cell group in parallel
-    futures = []
-    for cell_index in tqdm(range(len(indices_grouped_by_cells))):
-        future = client.submit(
-            _correct_errors_by_cell_group,
-            future_ra,
-            indices_grouped_by_cells[cell_index],
-            err_rate,
-            p_value,
-        )
-        futures.append(future)
+    with performance_report(filename="dask-report.html"):
+        futures = []
 
-    # wait until all done
-    completed, not_completed = wait(futures)
+        # 50 chunks at a time
+        chunks = partition_all(50, indices_grouped_by_cells)
 
-    # gather the resutls
+        for chunk in tqdm(chunks):
+            future = client.submit(
+                _correct_errors_by_cell_group_chunks,
+                future_ra,
+                chunk,
+                err_rate,
+                p_value,
+            )
+            futures.append(future)
+
+        # wait until all done
+        completed, not_completed = wait(futures)
+
+    # gather the resutls and release
     results = []
     for res in tqdm(completed):
         results.append(res.result())
-
-    # clean up
-    for future in tqdm(futures):
-        future.cancel()
+        res.release()
 
     del futures
+    del completed
 
     client.shutdown()
     client.close()
