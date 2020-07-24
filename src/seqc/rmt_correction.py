@@ -219,6 +219,9 @@ def _correct_errors(ra, err_rate, p_value=0.05):
         # wait until all done
         completed, not_completed = wait(futures)
 
+    if len(not_completed) > 1:
+        raise Exception("There are uncompleted tasks!")
+
     # gather the resutls and release
     results = []
     for res in tqdm(completed):
@@ -227,31 +230,33 @@ def _correct_errors(ra, err_rate, p_value=0.05):
 
     del futures
     del completed
+    del not_completed
 
     client.shutdown()
     client.close()
 
     # iterate through the list of returned read indices and donor rmts
     mapping = []
-    for i in range(len(results)):
-        res = results[i]
-        if len(res) == 0:
-            continue
-        for idx, idx_corrected_rmt in res:
+    for result in results:
+        for i in range(len(result)):
+            res = result[i]
+            if len(res) == 0:
+                continue
+            for idx, idx_corrected_rmt in res:
 
-            # record pre-/post-correction
-            mapping.append(
-                (
-                    ra.data["cell"][idx],
-                    ra.data["rmt"][idx],
-                    ra.data["rmt"][idx_corrected_rmt],
+                # record pre-/post-correction
+                mapping.append(
+                    (
+                        ra.data["cell"][idx],
+                        ra.data["rmt"][idx],
+                        ra.data["rmt"][idx_corrected_rmt],
+                    )
                 )
-            )
 
-            # correct
-            ra.data["rmt"][idx] = ra.data["rmt"][idx_corrected_rmt]
+                # correct
+                ra.data["rmt"][idx] = ra.data["rmt"][idx_corrected_rmt]
 
-            # report error
-            ra.data["status"][idx] |= ra.filter_codes["rmt_error"]
+                # report error
+                ra.data["status"][idx] |= ra.filter_codes["rmt_error"]
 
     return pd.DataFrame(mapping, columns=["CB", "UR", "UB"])
