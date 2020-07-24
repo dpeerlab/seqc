@@ -168,14 +168,12 @@ def run(args) -> None:
 
         log.info('Gzipping merged fastq file.')
         if pigz:
-            pigz_zip = "pigz --best -k -f {fname}".format(fname=merged_fastq)
+            pigz_zip = "pigz --best -f {fname}".format(fname=merged_fastq)
         else:
-            pigz_zip = "gzip -kf {fname}".format(fname=merged_fastq)
+            pigz_zip = "gzip -f {fname}".format(fname=merged_fastq)
         pigz_proc = io.ProcessManager(pigz_zip)
         pigz_proc.run_all()
         pigz_proc.wait_until_complete()  # prevents slowing down STAR alignment
-        # delete (now that we have .gz file)
-        io.ProcessManager(f"rm {merged_fastq}").run_all()
         merged_fastq += '.gz'  # reflect gzipped nature of file
 
         if aws_upload_key:
