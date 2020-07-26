@@ -10,30 +10,33 @@ import re
 
 def setup_logger(filename):
     """create a simple log file in the cwd to track progress and any errors"""
-    logging.basicConfig(filename=filename, level=logging.DEBUG, filemode='w')
+    logging.basicConfig(filename=filename, level=logging.DEBUG, filemode="w")
 
 
 def info(message):
     """print a timestamped update for the user.
     :param message:
     """
-    logging.info(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ':' + message)
+    logging.info(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ":" + message)
 
 
 def exception():
     """log the most recent exception to an initialized logger"""
-    logging.exception(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ':main:')
+    logging.exception(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ":main:")
 
 
 def notify(message):
     """print a timestamped update for the user and log it to file"""
     info(message)
-    print('SEQC: ' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ': %s' % message)
+    print("SEQC: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": %s" % message)
 
 
 def debug(message):
-    logging.debug(datetime.now().strftime("%Y-%m-%d %H:%M:%S") +
-                  ':%(module)s:%(funcName)s:' + ': %s' % message)
+    logging.debug(
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        + ":%(module)s:%(funcName)s:"
+        + ": %s" % message
+    )
 
 
 def args(arguments):
@@ -44,8 +47,11 @@ def args(arguments):
     :return: None
     """
     arguments = vars(arguments)
-    info('Passed command line arguments: {}'.format(
-            json.dumps(arguments, separators=(',', ': '), indent=4, sort_keys=True)))
+    info(
+        "Passed command line arguments: {}".format(
+            json.dumps(arguments, separators=(",", ": "), indent=4, sort_keys=True)
+        )
+    )
 
 
 class LogData:
@@ -59,35 +65,36 @@ class LogData:
       stored in.
     """
 
-    _oldver = ('{divide}\nINPUT\n{divide}\n'
-               'Total input reads:\t{n_fastq}\n'
-               '{divide}\nALIGNMENT (% FROM INPUT)\n{divide}\n'
-               'Total reads aligned:\t{n_sam} ({prop_al}%)\n'
-               ' - Genomic alignments:\t{genomic} ({prop_gen}%)\n'
-               ' - PhiX alignments:\t{phi_x} ({prop_phix}%)\n'
-               ' - Transcriptome alignments:\t{trans} ({prop_trans}%)\n'
-               '{divide}\nFILTERING (% FROM ALIGNMENT)\n{divide}\n'
-               'Genomic alignments:\t{genomic} ({bad_gen}%)\n'
-               'PhiX alignments:\t{phi_x} ({bad_phi}%)\n'
-               'Incorrect barcodes:\t{wrong_cb} ({bad_cb}%)\n'
-               'Missing cell barcodes:\t{no_cell} ({bad_cell}%)\n'
-               'Missing RMTs (same as above):\t{no_cell} ({bad_cell}%)\n'
-               'N present in RMT:\t{rmt_N} ({bad_rmtN}%)\n'
-               'Insufficient poly(T):\t{poly_t} ({bad_polyt}%)\n'
-               '{divide}\nCELL/MOLECULE COUNT DISTRIBUTION\n{divide}\n'
-               'Total molecules:\t\t{tot_mc}\n'
-               'Molecules lost:\t{mols_lost}\n'
-               'Cells lost:\t{cells_lost}\n'
-               'Cell description:\n{cell_desc}\n'
-               '{divide}\nSUMMARY\n{divide}\n'
-               'Total retained reads:\t{n_good} ({prop_good}%)\n'
-               'Total reads unaligned:\t{lost_al} ({prop_un}%)\n'
-               'Total reads filtered:\t{n_bad} ({prop_bad}%)\n'
-               '{divide}\n'
-               )
+    _oldver = (
+        "{divide}\nINPUT\n{divide}\n"
+        "Total input reads:\t{n_fastq}\n"
+        "{divide}\nALIGNMENT (% FROM INPUT)\n{divide}\n"
+        "Total reads aligned:\t{n_sam} ({prop_al}%)\n"
+        " - Genomic alignments:\t{genomic} ({prop_gen}%)\n"
+        " - PhiX alignments:\t{phi_x} ({prop_phix}%)\n"
+        " - Transcriptome alignments:\t{trans} ({prop_trans}%)\n"
+        "{divide}\nFILTERING (% FROM ALIGNMENT)\n{divide}\n"
+        "Genomic alignments:\t{genomic} ({bad_gen}%)\n"
+        "PhiX alignments:\t{phi_x} ({bad_phi}%)\n"
+        "Incorrect barcodes:\t{wrong_cb} ({bad_cb}%)\n"
+        "Missing cell barcodes:\t{no_cell} ({bad_cell}%)\n"
+        "Missing RMTs (same as above):\t{no_cell} ({bad_cell}%)\n"
+        "N present in RMT:\t{rmt_N} ({bad_rmtN}%)\n"
+        "Insufficient poly(T):\t{poly_t} ({bad_polyt}%)\n"
+        "{divide}\nCELL/MOLECULE COUNT DISTRIBUTION\n{divide}\n"
+        "Total molecules:\t\t{tot_mc}\n"
+        "Molecules lost:\t{mols_lost}\n"
+        "Cells lost:\t{cells_lost}\n"
+        "Cell description:\n{cell_desc}\n"
+        "{divide}\nSUMMARY\n{divide}\n"
+        "Total retained reads:\t{n_good} ({prop_good}%)\n"
+        "Total reads unaligned:\t{lost_al} ({prop_un}%)\n"
+        "Total reads filtered:\t{n_bad} ({prop_bad}%)\n"
+        "{divide}\n"
+    )
 
     @staticmethod
-    def string_to_regex(summary: str=None) -> str:
+    def string_to_regex(summary: str = None) -> str:
         """
         converts the contents of seqc.stats.ExperimentalYield.output into a regex object
         that may contain duplicate definitions
@@ -97,11 +104,11 @@ class LogData:
         if not summary:
             summary = ExperimentalYield.output
         replacements = [
-            ('{divide}', '-*?'),
-            ('(', '\('),
-            (')', '\)'),
-            ('{', '(?P<'),
-            ('}', '>.*?)')
+            ("{divide}", "-*?"),
+            ("(", "\("),
+            (")", "\)"),
+            ("{", "(?P<"),
+            ("}", ">.*?)"),
         ]
         for r in replacements:
             summary = summary.replace(r[0], r[1])
@@ -117,7 +124,7 @@ class LogData:
           equal to the number of times each was replicated
         """
 
-        name_pattern = '(\(\?P<)(.*?)(>\.\*\?\))'
+        name_pattern = "(\(\?P<)(.*?)(>\.\*\?\))"
         patterns = set()
         replicates = defaultdict(int)
         for mo in re.finditer(name_pattern, regex):
@@ -136,8 +143,8 @@ class LogData:
         :param duplicated_pattern: pattern_id
         :return regex: str, pattern without duplicate group definitions
         """
-        old = '(?P<{}>.*?)'.format(duplicated_pattern)
-        new = '(?P={})'.format(duplicated_pattern)
+        old = "(?P<{}>.*?)".format(duplicated_pattern)
+        new = "(?P={})".format(duplicated_pattern)
         idx = regex.find(old) + len(old)
         return regex[:idx] + regex[idx:].replace(old, new)
 
@@ -154,31 +161,47 @@ class LogData:
         :return: pd.DataFrame containing log data
         """
         index = (
-            ('total', 'input_reads'),
-            ('total', 'reads_aligned'),
-            ('aligned', 'genomic'),
-            ('aligned', 'phi_x'),
-            ('aligned', 'transcriptome'),
-            ('filtered', 'genomic'),
-            ('filtered', 'phi_x'),
-            ('filtered', 'incorrect_barcodes'),
-            ('filtered', 'no_barcodes'),
-            ('filtered', 'CB_contains_N'),
-            ('filtered', 'RMT_contains_N'),
-            ('filtered', 'broken_capture_primer'),
-            ('filtered', 'low_complexity'),
-            ('summary', 'reads_retained'),
-            ('summary', 'reads_not_aligned'),
-            ('summary', 'reads_filtered'),
-            ('summary', 'total_molecules')
+            ("total", "input_reads"),
+            ("total", "reads_aligned"),
+            ("aligned", "genomic"),
+            ("aligned", "phi_x"),
+            ("aligned", "transcriptome"),
+            ("filtered", "genomic"),
+            ("filtered", "phi_x"),
+            ("filtered", "incorrect_barcodes"),
+            ("filtered", "no_barcodes"),
+            ("filtered", "CB_contains_N"),
+            ("filtered", "RMT_contains_N"),
+            ("filtered", "broken_capture_primer"),
+            ("filtered", "low_complexity"),
+            ("summary", "reads_retained"),
+            ("summary", "reads_not_aligned"),
+            ("summary", "reads_filtered"),
+            ("summary", "total_molecules"),
         )
-        data_list = ('n_fastq', 'n_sam', 'genomic', 'phi_x', 'trans', 'genomic', 'phi_x',
-                     'wrong_cb', 'no_cell', 'cell_N', 'rmt_N', 'poly_t', 'dust', 'n_good',
-                     'lost_al', 'n_bad', 'tot_mc')
+        data_list = (
+            "n_fastq",
+            "n_sam",
+            "genomic",
+            "phi_x",
+            "trans",
+            "genomic",
+            "phi_x",
+            "wrong_cb",
+            "no_cell",
+            "cell_N",
+            "rmt_N",
+            "poly_t",
+            "dust",
+            "n_good",
+            "lost_al",
+            "n_bad",
+            "tot_mc",
+        )
 
         # account for older log version
-        if groupdict['wrong_cb'] == 'NA':
-            groupdict['wrong_cb'] = 0
+        if groupdict["wrong_cb"] == "NA":
+            groupdict["wrong_cb"] = 0
 
         data = list(map(lambda x: float(groupdict[x]), data_list))
 
@@ -202,7 +225,8 @@ class LogData:
             "^\[\('low_count', (?P<low_count>[0-9]+)\), "
             "\('low_coverage', (?P<low_coverage>[0-9]+)\), "
             "\('high_mt', (?P<high_mt>[0-9]+)\), "
-            "\('low_gene_detection', (?P<low_gene_detection>[0-9]+)\)\]$")
+            "\('low_gene_detection', (?P<low_gene_detection>[0-9]+)\)\]$"
+        )
 
         summary_pattern = (
             "^count\s+(?P<count>[0-9]+\.[0-9]+)\s"
@@ -212,45 +236,60 @@ class LogData:
             "25%\s+(?P<low_quartile>[0-9]+\.[0-9]+)\s"
             "50%\s+(?P<median>[0-9]+\.[0-9]+)\s"
             "75%\s+(?P<high_quartile>[0-9]+\.[0-9]+)\s"
-            "max\s+(?P<max>[0-9]+\.[0-9]+)\s?")
+            "max\s+(?P<max>[0-9]+\.[0-9]+)\s?"
+        )
 
-        cell = re.match(lost_pattern, groupdict['cells_lost'], re.M).groupdict()
-        mols = re.match(lost_pattern, groupdict['mols_lost'], re.M).groupdict()
-        desc = re.match(summary_pattern, groupdict['cell_desc'], re.M).groupdict()
+        cell = re.match(lost_pattern, groupdict["cells_lost"], re.M).groupdict()
+        mols = re.match(lost_pattern, groupdict["mols_lost"], re.M).groupdict()
+        desc = re.match(summary_pattern, groupdict["cell_desc"], re.M).groupdict()
 
         if not all((cell, mols, desc)):
-            raise ValueError('Regex failed to match log. Please check that you are using '
-                             'a matched log/seqc pair.')
+            raise ValueError(
+                "Regex failed to match log. Please check that you are using "
+                "a matched log/seqc pair."
+            )
 
         index = (
-            ('molecules_lost', 'low_count'),
-            ('molecules_lost', 'low_coverage'),
-            ('molecules_lost', 'high_mt'),
-            ('molecules_lost', 'low_gene_detection'),
-            ('cells_lost', 'low_count'),
-            ('cells_lost', 'low_coverage'),
-            ('cells_lost', 'high_mt'),
-            ('cells_lost', 'low_gene_detection'),
-            ('cell_summary', 'count'),
-            ('cell_summary', 'mean'),
-            ('cell_summary', 'std'),
-            ('cell_summary', 'min'),
-            ('cell_summary', '25%'),
-            ('cell_summary', '50%'),
-            ('cell_summary', '75%'),
-            ('cell_summary', 'max')
+            ("molecules_lost", "low_count"),
+            ("molecules_lost", "low_coverage"),
+            ("molecules_lost", "high_mt"),
+            ("molecules_lost", "low_gene_detection"),
+            ("cells_lost", "low_count"),
+            ("cells_lost", "low_coverage"),
+            ("cells_lost", "high_mt"),
+            ("cells_lost", "low_gene_detection"),
+            ("cell_summary", "count"),
+            ("cell_summary", "mean"),
+            ("cell_summary", "std"),
+            ("cell_summary", "min"),
+            ("cell_summary", "25%"),
+            ("cell_summary", "50%"),
+            ("cell_summary", "75%"),
+            ("cell_summary", "max"),
         )
         data_list = (
-            mols['low_count'], mols['low_coverage'], mols['high_mt'],
-            mols['low_gene_detection'], cell['low_count'], cell['low_coverage'],
-            cell['high_mt'], cell['low_gene_detection'], desc['count'], desc['mean'],
-            desc['std'], desc['min'], desc['low_quartile'], desc['median'],
-            desc['high_quartile'], desc['max'])
+            mols["low_count"],
+            mols["low_coverage"],
+            mols["high_mt"],
+            mols["low_gene_detection"],
+            cell["low_count"],
+            cell["low_coverage"],
+            cell["high_mt"],
+            cell["low_gene_detection"],
+            desc["count"],
+            desc["mean"],
+            desc["std"],
+            desc["min"],
+            desc["low_quartile"],
+            desc["median"],
+            desc["high_quartile"],
+            desc["max"],
+        )
         data_list = list(map(lambda x: float(x), data_list))
         return index, data_list
 
     @classmethod
-    def match_log(cls, log_file: str, pattern: str=None) -> dict:
+    def match_log(cls, log_file: str, pattern: str = None) -> dict:
         """
         create a dictionary to hold data from SEQC summary.
 
@@ -269,8 +308,8 @@ class LogData:
                 pattern_ = cls.replace_replicated_patterns(pattern_, k)
 
             # add beginning and end wildcards
-            pattern_ = '^.*?' + pattern_ + '.*?$'
-            with open(log_file, 'r') as f:
+            pattern_ = "^.*?" + pattern_ + ".*?$"
+            with open(log_file, "r") as f:
                 summary_data = f.read()
                 mo = re.match(pattern_, summary_data, re.M | re.DOTALL)
                 match_results = mo.groupdict()
@@ -293,10 +332,11 @@ class LogData:
         """
         mo = LogData.match_log(logfile)
         return LogData.dictionary_to_dataframe(
-            mo, logfile.split('/')[-1].replace('.log', ''))
+            mo, logfile.split("/")[-1].replace(".log", "")
+        )
 
     @classmethod
-    def parse_multiple(cls, directory: str, exclude: str='') -> pd.DataFrame:
+    def parse_multiple(cls, directory: str, exclude: str = "") -> pd.DataFrame:
         """
         parse multiple SEQC logs into a pd.DataFrame object with a multi-index
         corresponding to the RUN SUMMARY section of the seqc.log object and a column
@@ -313,13 +353,13 @@ class LogData:
         for path, subdirs, files in os.walk(directory):
             for name in files:
                 filepath = os.path.join(path, name)
-                if filepath.endswith('.log') and re.match(exclude, filepath) is None:
+                if filepath.endswith(".log") and re.match(exclude, filepath) is None:
                     logs.append(filepath)
 
         frames = [cls.parse_log(f) for f in logs]
 
         # create column index
-        cols = pd.MultiIndex.from_tuples(list(map(lambda p: tuple(p.split('/')), logs)))
+        cols = pd.MultiIndex.from_tuples(list(map(lambda p: tuple(p.split("/")), logs)))
         df = pd.concat(frames, 1)
         df.columns = cols
         return df
