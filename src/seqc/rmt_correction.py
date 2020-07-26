@@ -1,3 +1,4 @@
+import os
 from seqc.sequence.encodings import DNA3Bit
 import numpy as np
 from seqc import log
@@ -5,6 +6,9 @@ from seqc.read_array import ReadArray
 import time
 import pandas as pd
 import multiprocessing as multi
+
+
+log.logging.getLogger("asyncio").setLevel(log.logging.CRITICAL)
 
 # todo document me
 def generate_close_seq(seq):
@@ -167,15 +171,17 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     from dask.distributed import wait, performance_report
     from tlz import partition_all
 
+    n_workers = int(os.environ.get("SEQC_MAX_NUM_CPU", max(multi.cpu_count() - 1, 1)))
+
     # configure dask.distributed
     # use total number of available CPUs - 1
     # memory_terminate_fraction doesn't work for some reason
     # https://github.com/dask/distributed/issues/3519
     worker_kwargs = {
-        "n_workers": max(multi.cpu_count() - 1, 1),
+        "n_workers": n_workers,
         "memory_limit": "16G",
-        "memory_target_fraction": 0.8,
-        "memory_spill_fraction": 0.9,
+        "memory_target_fraction": 0.9,
+        "memory_spill_fraction": 0.95,
         "memory_pause_fraction": False,
         # "memory_terminate_fraction": False,
     }
@@ -188,18 +194,19 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     client = Client(cluster)
 
     print(client)
-    print("Dask Dashboard:", client.dashboard_link)
+    log.debug("Dask Dashboard=" + client.dashboard_link)
 
     # group by cells (same cell barcodes as one group)
-    print("Grouping...")
+    log.debug("Grouping...")
     indices_grouped_by_cells = ra.group_indices_by_cell()
 
     # send readarray in advance to all workers (i.e. broadcast=True)
     # this way, we reduce the serialization time
-    print("Scattering ReadArray...")
+    log.debug("Scattering ReadArray...")
     [future_ra] = client.scatter([ra], broadcast=True)
 
     # correct errors per cell group in parallel
+    log.debug("Submitting jobs to Dask...")
     with performance_report(filename="dask-report.html"):
         futures = []
 
