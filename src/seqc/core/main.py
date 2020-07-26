@@ -71,9 +71,17 @@ def main(argv):
             )
             if getattr(verified_args, k)
         }
+
+        # store the command-line arguments supplied by the user
+        remote_args["argv"] = argv
+
+        # clean up AWS security groups
         clean_up_security_groups()
+
+        # start EC2 instance and run the function
         ec2.AWSInstance(synchronous=False, **remote_args)(func)(verified_args)
     else:
+        # run the function locally
         func(arguments)
 
 
