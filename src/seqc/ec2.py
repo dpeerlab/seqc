@@ -791,8 +791,6 @@ class instance_clean_up:
 
     def __enter__(self):
         pass
-        # log.setup_logger(self.log_name)
-        # log.notify('Beginning protected execution')  # todo only run if verbose
 
     @staticmethod
     def _get_instance_id():
