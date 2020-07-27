@@ -8,9 +8,13 @@ import os
 import re
 
 
-def setup_logger(filename):
+def setup_logger(filename, is_debug):
     """create a simple log file in the cwd to track progress and any errors"""
-    logging.basicConfig(filename=filename, level=logging.DEBUG, filemode="w")
+    logging.basicConfig(
+        filename=filename,
+        level=logging.DEBUG if is_debug else logging.INFO,
+        filemode="w",
+    )
 
 
 def info(message):
@@ -18,6 +22,13 @@ def info(message):
     :param message:
     """
     logging.info(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ":" + message)
+
+
+def warn(message):
+    """print a timestamped update for the user.
+    :param message:
+    """
+    logging.warn(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ":" + message)
 
 
 def exception():
@@ -31,11 +42,16 @@ def notify(message):
     print("SEQC: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": %s" % message)
 
 
-def debug(message):
+def debug(message, module_name=None, func_name=None):
+
+    module_name = f" [{module_name}]" if module_name else ""
+    func_name = f" [{func_name}]" if func_name else ""
     logging.debug(
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        + ":%(module)s:%(funcName)s:"
-        + ": %s" % message
+        + module_name
+        + func_name
+        + " "
+        + message
     )
 
 
