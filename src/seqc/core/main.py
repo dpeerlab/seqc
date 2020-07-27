@@ -67,12 +67,13 @@ def main(argv):
                 "volume_size",
                 "user_tags",
                 "remote_update",
-                "ami_id"
+                "ami_id",
             )
             if getattr(verified_args, k)
         }
 
         # store the command-line arguments supplied by the user
+        # the same aguments will be used to run SEQC on EC2
         remote_args["argv"] = argv
 
         # clean up AWS security groups
