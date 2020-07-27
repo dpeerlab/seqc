@@ -227,7 +227,7 @@ def run(args) -> None:
 
     # ######################## MAIN FUNCTION BEGINS HERE ################################
 
-    log.setup_logger(args.log_name)
+    log.setup_logger(args.log_name, args.debug)
 
     with ec2.instance_clean_up(
             email=args.email, upload=args.upload_prefix, log_name=args.log_name,
@@ -307,7 +307,7 @@ def run(args) -> None:
         # SEQC was started from input other than fastq files
         if args.min_poly_t is None:
             args.min_poly_t = 0
-            log.notify('Warning: SEQC started from step other than unmerged fastq with '
+            log.warn('Warning: SEQC started from step other than unmerged fastq with '
                        'empty --min-poly-t parameter. Continuing with --min-poly-t 0.')
 
         if align:
