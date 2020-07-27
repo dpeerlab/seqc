@@ -6,9 +6,13 @@ from seqc.read_array import ReadArray
 import time
 import pandas as pd
 import multiprocessing as multi
+from tqdm import tqdm
+import dask
+from distributed import Client, LocalCluster
+from dask.distributed import wait, performance_report
+from tlz import partition_all
 
-
-log.logging.getLogger("asyncio").setLevel(log.logging.CRITICAL)
+log.logging.getLogger("asyncio").setLevel(log.logging.WARNING)
 
 # todo document me
 def generate_close_seq(seq):
@@ -165,12 +169,6 @@ def _correct_errors_by_cell_group_chunks(ra, cell_group_chunks, err_rate, p_valu
 
 def _correct_errors(ra, err_rate, p_value=0.05):
 
-    from tqdm import tqdm
-    import dask
-    from distributed import Client, LocalCluster
-    from dask.distributed import wait, performance_report
-    from tlz import partition_all
-
     n_workers = int(os.environ.get("SEQC_MAX_NUM_CPU", max(multi.cpu_count() - 1, 1)))
 
     # configure dask.distributed
@@ -190,23 +188,35 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     dask.config.set({"distributed.worker.memory.terminate": False})
     dask.config.set({"distributed.scheduler.allowed-failures": 50})
 
-    cluster = LocalCluster(dashboard_address="0.0.0.0:9000", **worker_kwargs)
+    # setup Dask distributed client
+    cluster = LocalCluster(**worker_kwargs)
     client = Client(cluster)
 
-    print(client)
-    log.debug("Dask Dashboard=" + client.dashboard_link)
+    # debug message
+    log.debug(
+        "Dask processes={} threads={}".format(
+            len(client.nthreads().values()), np.sum(list(client.nthreads().values()))
+        ),
+        module_name="rmt_correction",
+    )
+    log.debug(
+        "Dask worker_kwargs "
+        + " ".join([f"{k}={v}" for k, v in worker_kwargs.items()]),
+        module_name="rmt_correction",
+    )
+    log.debug("Dask Dashboard=" + client.dashboard_link, module_name="rmt_correction")
 
     # group by cells (same cell barcodes as one group)
-    log.debug("Grouping...")
+    log.debug("Grouping...", module_name="rmt_correction")
     indices_grouped_by_cells = ra.group_indices_by_cell()
 
     # send readarray in advance to all workers (i.e. broadcast=True)
     # this way, we reduce the serialization time
-    log.debug("Scattering ReadArray...")
+    log.debug("Scattering ReadArray...", module_name="rmt_correction")
     [future_ra] = client.scatter([ra], broadcast=True)
 
     # correct errors per cell group in parallel
-    log.debug("Submitting jobs to Dask...")
+    log.debug("Submitting jobs to Dask...", module_name="rmt_correction")
     with performance_report(filename="dask-report.html"):
         futures = []
 
@@ -235,6 +245,7 @@ def _correct_errors(ra, err_rate, p_value=0.05):
         results.append(res.result())
         res.release()
 
+    # clean up
     del futures
     del completed
     del not_completed
