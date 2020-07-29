@@ -177,7 +177,7 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     # https://github.com/dask/distributed/issues/3519
     worker_kwargs = {
         "n_workers": n_workers,
-        "memory_limit": "16G",
+        "memory_limit": "32G",
         "memory_target_fraction": 0.9,
         "memory_spill_fraction": 0.95,
         "memory_pause_fraction": False,
@@ -270,6 +270,14 @@ def _correct_errors(ra, err_rate, p_value=0.05):
                         ra.data["rmt"][idx_corrected_rmt],
                     )
                 )
+
+    # iterate through the list of returned read indices and donor rmts
+    for result in results:
+        for i in range(len(result)):
+            res = result[i]
+            if len(res) == 0:
+                continue
+            for idx, idx_corrected_rmt in res:
 
                 # correct
                 ra.data["rmt"][idx] = ra.data["rmt"][idx_corrected_rmt]
