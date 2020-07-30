@@ -234,16 +234,28 @@ def _correct_errors(ra, err_rate, p_value=0.05):
             futures.append(future)
 
         # wait until all done
+        log.debug("Waiting untill all tasks complete...", module_name="rmt_correction")
         completed, not_completed = wait(futures)
 
     if len(not_completed) > 1:
         raise Exception("There are uncompleted tasks!")
 
     # gather the resutls and release
+    log.debug(
+        "Collecting the task results from the workers...", module_name="rmt_correction"
+    )
     results = []
-    for res in tqdm(completed):
-        results.append(res.result())
-        res.release()
+    for future in tqdm(completed):
+        # this returns a list of a list
+        # len(result) should be the number of chunks e.g. 50
+        result = future.result()
+
+        # remove empty lists
+        result = list(filter(lambda x: len(x) > 0, result))
+
+        # aggregate and release
+        results.extend(result)
+        future.release()
 
     # clean up
     del futures
@@ -254,35 +266,29 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     client.close()
 
     # iterate through the list of returned read indices and donor rmts
+    # create a mapping tble of pre-/post-correction
     mapping = []
     for result in results:
-        for i in range(len(result)):
-            res = result[i]
-            if len(res) == 0:
-                continue
-            for idx, idx_corrected_rmt in res:
+        for idx, idx_corrected_rmt in result:
 
-                # record pre-/post-correction
-                mapping.append(
-                    (
-                        ra.data["cell"][idx],
-                        ra.data["rmt"][idx],
-                        ra.data["rmt"][idx_corrected_rmt],
-                    )
+            # record pre-/post-correction
+            mapping.append(
+                (
+                    ra.data["cell"][idx],
+                    ra.data["rmt"][idx],
+                    ra.data["rmt"][idx_corrected_rmt],
                 )
+            )
 
     # iterate through the list of returned read indices and donor rmts
+    # actually, update the read array object with corrected UMI
     for result in results:
-        for i in range(len(result)):
-            res = result[i]
-            if len(res) == 0:
-                continue
-            for idx, idx_corrected_rmt in res:
+        for idx, idx_corrected_rmt in result:
 
-                # correct
-                ra.data["rmt"][idx] = ra.data["rmt"][idx_corrected_rmt]
+            # correct
+            ra.data["rmt"][idx] = ra.data["rmt"][idx_corrected_rmt]
 
-                # report error
-                ra.data["status"][idx] |= ra.filter_codes["rmt_error"]
+            # report error
+            ra.data["status"][idx] |= ra.filter_codes["rmt_error"]
 
     return pd.DataFrame(mapping, columns=["CB", "UR", "UB"])
