@@ -18,7 +18,7 @@ class ReadArray:
     _dtype = [
         ("status", np.uint8),  # if > 8 tests, change to int16
         ("cell", np.int64),
-        ("rmt", np.int32),
+        ("rmt", np.int64),
         ("n_poly_t", np.uint8),
     ]
 
