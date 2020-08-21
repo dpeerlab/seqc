@@ -5,6 +5,7 @@ import shutil
 import nose2
 from nose2.tools import params
 from seqc.sequence import index, gtf
+from seqc.sequence.encodings import DNA3Bit
 from seqc.read_array import ReadArray
 from test_dataset import dataset_local
 
@@ -29,6 +30,36 @@ class TestReadArray(unittest.TestCase):
             dataset_local.bam % platform, self.translator, required_poly_t=0
         )
         self.assertIsNotNone(ra)
+
+    def test_read_array_rmt_decode_10x_v2(self):
+        platform = "ten_x_v2"
+
+        # create a readarray
+        ra = ReadArray.from_alignment_file(
+            dataset_local.bam % platform, self.translator, required_poly_t=0
+        )
+
+        # see if we can decode numeric UMI back to nucleotide sequence
+        dna3bit = DNA3Bit()
+        for rmt in ra.data["rmt"]:
+            decoded = dna3bit.decode(rmt).decode()
+            # ten_x_v2 UMI length = 10 nt
+            self.assertEqual(len(decoded), 10)
+
+    def test_read_array_rmt_decode_10x_v3(self):
+        platform = "ten_x_v3"
+
+        # create a readarray
+        ra = ReadArray.from_alignment_file(
+            dataset_local.bam % platform, self.translator, required_poly_t=0
+        )
+
+        # see if we can decode numeric UMI back to nucleotide sequence
+        dna3bit = DNA3Bit()
+        for rmt in ra.data["rmt"]:
+            decoded = dna3bit.decode(rmt).decode()
+            # ten_x_v3 UMI length = 12 nt
+            self.assertEqual(len(decoded), 12)
 
 
 class TestTranslator(unittest.TestCase):
