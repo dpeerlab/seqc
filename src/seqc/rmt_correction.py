@@ -177,9 +177,9 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     # https://github.com/dask/distributed/issues/3519
     worker_kwargs = {
         "n_workers": n_workers,
-        "memory_limit": "32G",
-        "memory_target_fraction": 0.9,
-        "memory_spill_fraction": 0.95,
+        "memory_limit": "64G",
+        "memory_target_fraction": 0.95,
+        "memory_spill_fraction": 0.99,
         "memory_pause_fraction": False,
         # "memory_terminate_fraction": False,
     }
