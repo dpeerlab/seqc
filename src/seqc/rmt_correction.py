@@ -175,8 +175,12 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     # use total number of available CPUs - 1
     # memory_terminate_fraction doesn't work for some reason
     # https://github.com/dask/distributed/issues/3519
+    # https://docs.dask.org/en/latest/setup/single-distributed.html#localcluster
+    # https://docs.dask.org/en/latest/scheduling.html#local-threads
     worker_kwargs = {
         "n_workers": n_workers,
+        "threads_per_worker": 1,
+        "processes": True,
         "memory_limit": "64G",
         "memory_target_fraction": 0.95,
         "memory_spill_fraction": 0.99,
