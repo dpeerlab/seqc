@@ -30,6 +30,7 @@ def run(args) -> None:
     from seqc.summary.summary import MiniSummary
     from seqc.stats.mast import run_mast
     import logging
+    import pickle
     # logger = logging.getLogger('weasyprint')
     # logger.handlers = []  # Remove the default stderr handler
     # logger.setLevel(100)
@@ -327,6 +328,10 @@ def run(args) -> None:
                 args.alignment_file, args.index, upload_bamfile, args.min_poly_t,
                 max_insert_size)
 
+            # write ra to pickle which will be used later to parallel process rmt correction
+            with open("pre-corrected-readarray.pickle", "wb") as fout:
+                pickle.dump(ra, fout)
+
         else:
             manage_bamfile = None
             ra = ReadArray.load(args.read_array)
@@ -481,18 +486,17 @@ def run(args) -> None:
                 try:
                     ec2.Retry(retries=5)(io.S3.upload_file)(item, bucket, key)
                     item_name = item.split('/')[-1]
-                    log.info('Successfully uploaded %s to the specified S3 location '
-                             '"%s%s".' % (item, args.upload_prefix, item_name))
+                    log.info('Successfully uploaded %s to "%s%s".' % (item, args.upload_prefix, item_name))
                 except FileNotFoundError:
                     log.notify('Item %s was not found! Continuing with upload...' % item)
 
         if manage_merged:
             manage_merged.wait_until_complete()
-            log.info('Successfully uploaded %s to the specified S3 location "%s"' %
+            log.info('Successfully uploaded %s to "%s"' %
                      (args.merged_fastq, args.upload_prefix))
         if manage_bamfile:
             manage_bamfile.wait_until_complete()
-            log.info('Successfully uploaded %s to the specified S3 location "%s"'
+            log.info('Successfully uploaded %s to "%s"'
                      % (args.alignment_file, args.upload_prefix))
 
         log.info('SEQC run complete. Cluster will be terminated')
@@ -508,8 +512,7 @@ def run(args) -> None:
                     print(args.output_prefix + '_' + item)
                     ec2.Retry(retries=5)(io.S3.upload_file)(
                         args.output_prefix + '_' + item, bucket, key)
-                    log.info('Successfully uploaded %s to the specified S3 location '
-                             '"%s".' % (item, args.upload_prefix))
+                    log.info('Successfully uploaded %s to "%s".' % (item, args.upload_prefix))
                 except FileNotFoundError:
                     log.notify('Item %s was not found! Continuing with upload...' % item)
         else:
