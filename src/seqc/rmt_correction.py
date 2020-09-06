@@ -1,36 +1,68 @@
 import os
-from seqc.sequence.encodings import DNA3Bit
+import pickle
+import math
+import time
+import psutil
+import pandas as pd
 import numpy as np
+from tqdm import tqdm
+from scipy.special import gammainc
 from seqc import log
 from seqc.read_array import ReadArray
-import time
-import pandas as pd
-import multiprocessing as multi
-from tqdm import tqdm
 import dask
 from distributed import Client, LocalCluster
 from dask.distributed import wait, performance_report
 from tlz import partition_all
+from numba import jit, njit
+
 
 log.logging.getLogger("asyncio").setLevel(log.logging.WARNING)
 
-# todo document me
+
+@njit
+def DNA3Bit_seq_len(i: int) -> int:
+    """
+    Return the length of an encoded sequence based on its binary representation
+
+    :param i: int, encoded sequence
+    """
+    l = 0
+    while i > 0:
+        l += 1
+        i >>= 3
+    return l
+
+
+@njit
 def generate_close_seq(seq):
-    """ Return a list of all sequences that are up to 2 hamm distance from seq
+    """Return a list of all sequences that are up to 2 hamm distance from seq
     :param seq:
     """
-    res = []
-    l = DNA3Bit.seq_len(seq)
+    DNA3Bit_bin2strdict = {
+        0b100: b"A",
+        0b110: b"C",
+        0b101: b"G",
+        0b011: b"T",
+        0b111: b"N",
+    }
+
+    # res = []
+    res = np.empty(0, dtype=np.int64)
+
+    l = DNA3Bit_seq_len(seq)
 
     # generate all sequences that are dist 1
     for i in range(l):
         mask = 0b111 << (i * 3)
         cur_chr = (seq & mask) >> (i * 3)
-        res += [
-            seq & (~mask) | (new_chr << (i * 3))
-            for new_chr in DNA3Bit.bin2strdict.keys()
-            if new_chr != cur_chr
-        ]
+        res = np.append(
+            res,
+            [
+                seq & (~mask) | (new_chr << (i * 3))
+                for new_chr in DNA3Bit_bin2strdict.keys()
+                if new_chr != cur_chr
+            ],
+        )
     # generate all sequences that are dist 2
     for i in range(l):
         mask_i = 0b111 << (i * 3)
@@ -39,18 +71,21 @@ def generate_close_seq(seq):
             mask_j = 0b111 << (j * 3)
             chr_j = (seq & mask_j) >> (j * 3)
             mask = mask_i | mask_j
-            res += [
-                seq & (~mask) | (new_chr_i << (i * 3)) | (new_chr_j << (j * 3))
-                for new_chr_i in DNA3Bit.bin2strdict.keys()
-                if new_chr_i != chr_i
-                for new_chr_j in DNA3Bit.bin2strdict.keys()
-                if new_chr_j != chr_j
-            ]
+            res = np.append(
+                res,
+                [
+                    seq & (~mask) | (new_chr_i << (i * 3)) | (new_chr_j << (j * 3))
+                    for new_chr_i in DNA3Bit_bin2strdict.keys()
+                    if new_chr_i != chr_i
+                    for new_chr_j in DNA3Bit_bin2strdict.keys()
+                    if new_chr_j != chr_j
+                ],
+            )
 
-    return res
+    return list(res)
 
 
-# todo document me
+@njit
 def probability_for_convert_d_to_r(d_seq, r_seq, err_rate):
     """
     Return the probability of d_seq turning into r_seq based on the err_rate table
@@ -61,23 +96,25 @@ def probability_for_convert_d_to_r(d_seq, r_seq, err_rate):
     :param d_seq:
     """
 
-    if DNA3Bit.seq_len(d_seq) != DNA3Bit.seq_len(r_seq):
+    if DNA3Bit_seq_len(d_seq) != DNA3Bit_seq_len(r_seq):
         return 1
 
     p = 1.0
     while d_seq > 0:
         if d_seq & 0b111 != r_seq & 0b111:
-            if isinstance(err_rate, float):
+            if type(err_rate) is np.float64:
                 p *= err_rate
             else:
-                p *= err_rate[(d_seq & 0b111, r_seq & 0b111)]
+                # p *= err_rate[(d_seq & 0b111, r_seq & 0b111)]
+                print(type(err_rate))
+                raise Exception("err_rate is not of float!")
         d_seq >>= 3
         r_seq >>= 3
     return p
 
 
 def in_drop(read_array, error_rate, alpha=0.05):
-    """ Tag any RMT errors
+    """Tag any RMT errors
 
     :param read_array: Read array
     :param error_rate: Sequencing error rate determined during barcode correction
@@ -89,8 +126,6 @@ def in_drop(read_array, error_rate, alpha=0.05):
 
 # a method called by each process to correct RMT for each cell
 def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
-
-    from scipy.special import gammainc
 
     # cell_group = indices_grouped_by_cells[cell_index]
     # Breaks for each gene
@@ -161,18 +196,69 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
 
 
 def _correct_errors_by_cell_group_chunks(ra, cell_group_chunks, err_rate, p_value):
+
+    if ra == None:
+        with open("pre-corrected-readarray.pickle", "rb") as fin:
+            ra = pickle.load(fin)
+
     return [
         _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value)
         for cell_group in cell_group_chunks
     ]
 
 
+def _get_cpu_count():
+    # this will give the total CPU count that your (virtual) machine is equipped with.
+    # with LSF, this number is NOT the CPU count your job is allocated with.
+
+    return psutil.cpu_count()
+
+
+def _get_total_memory_gb():
+    # this will give the total memory that your (virtual) machine is equipped with.
+    # with LSF, this number is NOT the memory amount your job is allocated with.
+
+    mem = psutil.virtual_memory()
+
+    return int(mem.total / 1024 ** 3)
+
+
+def _get_optimum_workers():
+    # calculate based on avail memory
+
+    n = math.floor(_get_total_memory_gb() / 7)
+
+    return 1 if n == 0 else n
+
+
 def _correct_errors(ra, err_rate, p_value=0.05):
 
-    n_workers = int(os.environ.get("SEQC_MAX_NUM_CPU", max(multi.cpu_count() - 1, 1)))
+    # True: use Dask's broadcast (ra transfer via inproc/tcp)
+    # False: each worker reacs ra.pickle from disk
+    use_dask_broadcast = False
+
+    log.debug(
+        "Available CPU/memory: {} / {} GB".format(
+            _get_cpu_count(), _get_total_memory_gb()
+        ),
+        module_name="rmt_correction",
+    )
+
+    n_workers = _get_optimum_workers()
+
+    log.debug(
+        "Estimated optimum n_workers: {}".format(n_workers),
+        module_name="rmt_correction",
+    )
+
+    if int(os.environ.get("SEQC_MAX_NUM_CPU", 0)) > 0:
+        n_workers = int(os.environ.get("SEQC_MAX_NUM_CPU"))
+        log.debug(
+            "n_workers overridden with SEQC_MAX_NUM_CPU: {}".format(n_workers),
+            module_name="rmt_correction",
+        )
 
     # configure dask.distributed
-    # use total number of available CPUs - 1
     # memory_terminate_fraction doesn't work for some reason
     # https://github.com/dask/distributed/issues/3519
     # https://docs.dask.org/en/latest/setup/single-distributed.html#localcluster
@@ -216,21 +302,24 @@ def _correct_errors(ra, err_rate, p_value=0.05):
 
     # send readarray in advance to all workers (i.e. broadcast=True)
     # this way, we reduce the serialization time
-    log.debug("Scattering ReadArray...", module_name="rmt_correction")
-    [future_ra] = client.scatter([ra], broadcast=True)
+    if use_dask_broadcast:
+        log.debug("Scattering ReadArray...", module_name="rmt_correction")
+        [future_ra] = client.scatter([ra], broadcast=True)
 
     # correct errors per cell group in parallel
     log.debug("Submitting jobs to Dask...", module_name="rmt_correction")
     with performance_report(filename="dask-report.html"):
         futures = []
 
-        # 50 chunks at a time
-        chunks = partition_all(50, indices_grouped_by_cells)
+        # distribute chunks to workers evenly
+        n_chunks = math.ceil(len(indices_grouped_by_cells) / n_workers)
+        chunks = partition_all(n_chunks, indices_grouped_by_cells)
 
-        for chunk in tqdm(chunks):
+        for chunk in tqdm(chunks, disable=None):
+
             future = client.submit(
                 _correct_errors_by_cell_group_chunks,
-                future_ra,
+                future_ra if use_dask_broadcast else None,
                 chunk,
                 err_rate,
                 p_value,
@@ -249,7 +338,7 @@ def _correct_errors(ra, err_rate, p_value=0.05):
         "Collecting the task results from the workers...", module_name="rmt_correction"
     )
     results = []
-    for future in tqdm(completed):
+    for future in tqdm(completed, disable=None):
         # this returns a list of a list
         # len(result) should be the number of chunks e.g. 50
         result = future.result()
