@@ -47,7 +47,7 @@ def index(args):
                     ec2.Retry(retries=5)(io.S3.upload_file)(
                         item, bucket, key
                     )
-                    log.info("Successfully uploaded {} to the specified S3 location {}".format(item, args.upload_prefix))
+                    log.info("Successfully uploaded {} to {}".format(item, args.upload_prefix))
                 except FileNotFoundError:
                     log.notify("Item {} was not found! Continuing with upload...".format(item))
 
