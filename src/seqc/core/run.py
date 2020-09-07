@@ -329,7 +329,7 @@ def run(args) -> None:
                 max_insert_size)
 
             # write ra to pickle which will be used later to parallel process rmt correction
-            with open("pre-corrected-readarray.pickle", "wb") as fout:
+            with open("pre-correction-ra.pickle", "wb") as fout:
                 pickle.dump(ra, fout)
 
         else:
