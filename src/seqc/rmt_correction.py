@@ -132,19 +132,17 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
     # cell_group = indices_grouped_by_cells[cell_index]
     # Breaks for each gene
     gene_inds = cell_group[np.argsort(ra.genes[cell_group])]
-    ra_genes_inds = (
-        ra.genes[gene_inds].todense()
-        if isspmatrix(ra.genes[gene_inds])
-        else ra.genes[gene_inds]
-    )
-    breaks = np.where(np.diff(ra_genes_inds))[0] + 1
+    # if isspmatrix(ra.genes[gene_inds]):
+    #     breaks = np.where(np.diff(ra.genes[gene_inds].todense()))[0] + 1
+    # else:
+    #     breaks = np.where(np.diff(ra.genes[gene_inds]))[0] + 1
+    breaks = np.where(np.diff(ra.genes[gene_inds]))[0] + 1
     splits = np.split(gene_inds, breaks)
 
     del gene_inds
     del breaks
-    del ra_genes_inds
 
-    rmt_groups = defaultdict()
+    rmt_groups = defaultdict(list)
     # rmt_groups = {}
     res = []
 
@@ -152,8 +150,6 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
         # RMT groups
         for ind in inds:
             rmt = ra.data["rmt"][ind]
-
-            # (2)
             rmt_groups[rmt].append(ind)
 
             # (1)
@@ -226,7 +222,6 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
 def _correct_errors_by_cell_group_chunks(ra, cell_group_chunks, err_rate, p_value):
 
     if ra == None:
-        # with open("pre-correction-ra.pickle.weird.bak", "rb") as fin:
         with open("pre-correction-ra.pickle", "rb") as fin:
             ra = pickle.load(fin)
 
@@ -257,9 +252,7 @@ def _get_optimum_workers(ra):
 
     # calculate ra size in GB
     extra = 2
-    ra_size = (
-        math.ceil(os.stat("pre-correction-ra.pickle").st_size / 1024 ** 3) + extra
-    )
+    ra_size = math.ceil(os.stat("pre-correction-ra.pickle").st_size / 1024 ** 3) + extra
 
     n = math.floor(_get_total_memory_gb() / ra_size)
 
@@ -335,11 +328,15 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     log.debug("Grouping...", module_name="rmt_correction")
     indices_grouped_by_cells = ra.group_indices_by_cell()
 
-    # send readarray in advance to all workers (i.e. broadcast=True)
-    # this way, we reduce the serialization time
     if use_dask_broadcast:
+        # send readarray in advance to all workers (i.e. broadcast=True)
+        # this way, we reduce the serialization time
         log.debug("Scattering ReadArray...", module_name="rmt_correction")
         [future_ra] = client.scatter([ra], broadcast=True)
+    else:
+        # write ra to pickle which will be used later to parallel process rmt correction
+        with open("pre-correction-ra.pickle", "wb") as fout:
+            pickle.dump(ra, fout)
 
     # correct errors per cell group in parallel
     log.debug("Submitting jobs to Dask...", module_name="rmt_correction")

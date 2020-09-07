@@ -327,11 +327,6 @@ def run(args) -> None:
             ra, manage_bamfile, = create_read_array(
                 args.alignment_file, args.index, upload_bamfile, args.min_poly_t,
                 max_insert_size)
-
-            # write ra to pickle which will be used later to parallel process rmt correction
-            with open("pre-correction-ra.pickle", "wb") as fout:
-                pickle.dump(ra, fout)
-
         else:
             manage_bamfile = None
             ra = ReadArray.load(args.read_array)
