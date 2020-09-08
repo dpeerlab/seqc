@@ -248,13 +248,27 @@ def _get_total_memory_gb():
 
 
 def _get_optimum_workers(ra):
-    # calculate based on avail memory
+    # calculate based on avail memory & readarray size.
+    # just increasing memory won't help. lack of cpu will make each process fight for cpu time.
 
-    # calculate ra size in GB
-    extra = 2
-    ra_size = math.ceil(os.stat("pre-correction-ra.pickle").st_size / 1024 ** 3) + extra
+    # ra_size = math.ceil(os.stat("pre-correction-ra.pickle").st_size / 1024 ** 3) + extra
 
-    n = math.floor(_get_total_memory_gb() / ra_size)
+    # calculate ra size
+    # ra_size = ra.data.nbytes
+    # ra_size += ra.genes.data.nbytes + ra.genes.indptr.nbytes + ra.genes.indices.nbytes
+    # ra_size += (
+    #     ra.positions.data.nbytes
+    #     + ra.positions.indptr.nbytes
+    #     + ra.positions.indices.nbytes
+    # )
+
+    # ra.data, ra.genes, and ra.positions are all numpy array
+    ra_size = ra.data.nbytes + ra.genes.nbytes + ra.positions.nbytes
+
+    # extra bytes needed
+    extra = 2 * 1024 ** 3
+
+    n = math.floor(psutil.virtual_memory().total / (ra_size + extra) / 1024 ** 3)
 
     return 1 if n == 0 else n
 
