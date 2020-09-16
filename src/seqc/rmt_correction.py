@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from scipy.special import gammainc
-from scipy.sparse import isspmatrix
 from seqc import log
 from seqc.read_array import ReadArray
 import dask
@@ -129,13 +128,8 @@ def in_drop(read_array, error_rate, alpha=0.05):
 # a method called by each process to correct RMT for each cell
 def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
 
-    # cell_group = indices_grouped_by_cells[cell_index]
     # Breaks for each gene
     gene_inds = cell_group[np.argsort(ra.genes[cell_group])]
-    # if isspmatrix(ra.genes[gene_inds]):
-    #     breaks = np.where(np.diff(ra.genes[gene_inds].todense()))[0] + 1
-    # else:
-    #     breaks = np.where(np.diff(ra.genes[gene_inds]))[0] + 1
     breaks = np.where(np.diff(ra.genes[gene_inds]))[0] + 1
     splits = np.split(gene_inds, breaks)
 
@@ -143,7 +137,6 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
     del breaks
 
     rmt_groups = defaultdict(list)
-    # rmt_groups = {}
     res = []
 
     for inds in splits:
@@ -151,18 +144,6 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
         for ind in inds:
             rmt = ra.data["rmt"][ind]
             rmt_groups[rmt].append(ind)
-
-            # (1)
-            # if rmt in rmt_groups:
-            #     rmt_groups[rmt].append(ind)
-            # else:
-            #     rmt_groups[rmt] = [ind]
-
-            # (0)
-            # try:
-            #     rmt_groups[rmt].append(ind)
-            # except KeyError:
-            #     rmt_groups[rmt] = [ind]
 
         if len(rmt_groups) == 1:
             continue
@@ -183,10 +164,6 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
                     donor_count = len(rmt_groups[donor_rmt])
                 else:
                     continue
-                # try:
-                #     donor_count = len(rmt_groups[donor_rmt])
-                # except KeyError:
-                #     continue
 
                 # Build likelihood
                 # Probability of converting donor to target
@@ -250,17 +227,6 @@ def _get_total_memory_gb():
 def _get_optimum_workers(ra):
     # calculate based on avail memory & readarray size.
     # just increasing memory won't help. lack of cpu will make each process fight for cpu time.
-
-    # ra_size = math.ceil(os.stat("pre-correction-ra.pickle").st_size / 1024 ** 3) + extra
-
-    # calculate ra size
-    # ra_size = ra.data.nbytes
-    # ra_size += ra.genes.data.nbytes + ra.genes.indptr.nbytes + ra.genes.indices.nbytes
-    # ra_size += (
-    #     ra.positions.data.nbytes
-    #     + ra.positions.indptr.nbytes
-    #     + ra.positions.indices.nbytes
-    # )
 
     # ra.data, ra.genes, and ra.positions are all numpy array
     ra_size = ra.data.nbytes + ra.genes.nbytes + ra.positions.nbytes
@@ -362,10 +328,6 @@ def _correct_errors(ra, err_rate, p_value=0.05):
         chunks = partition_all(n_chunks, indices_grouped_by_cells)
 
         for chunk in tqdm(chunks, disable=None):
-
-            # _correct_errors_by_cell_group_chunks(
-            #     future_ra if use_dask_broadcast else None, chunk, err_rate, p_value
-            # )
 
             future = client.submit(
                 _correct_errors_by_cell_group_chunks,
