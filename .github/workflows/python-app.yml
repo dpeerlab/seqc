@@ -38,4 +38,5 @@ jobs:
       run: pip install .
     - name: Test with nose2
       run: |
+        export TMPDIR="/tmp"
         nose2 -s src/seqc/tests test_run

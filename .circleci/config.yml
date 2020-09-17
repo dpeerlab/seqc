@@ -22,7 +22,7 @@ jobs:
           command: pip install .
       - run:
           name: Test
-          command: nose2 -s src/seqc/tests test_run
+          command: python -m nose2 -s src/seqc/tests test_run
 
 
 workflows:
