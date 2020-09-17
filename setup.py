@@ -24,13 +24,15 @@ if sys.version_info.major != 3:
 if sys.version_info.minor < 5:
     warn("Multiprocessing analysis methods may not function on Python versions < 3.5")
 
+main_ns = {}
+
 # get version
 with open("src/seqc/version.py") as f:
-    exec(f.read())
+    exec(f.read(), main_ns)
 
 setup(
     name="seqc",
-    version=__version__,  # read in from the exec of version.py; ignore error
+    version=main_ns["__version__"],
     description="Single Cell Sequencing Processing and QC Suite",
     author="Ambrose J. Carr",
     author_email="mail@ambrosejcarr.com",
