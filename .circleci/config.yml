@@ -10,10 +10,10 @@ jobs:
       - checkout
       - python/load-cache
       - run:
-        command:
-            - pip install Cython
-            - pip install numpy
-            - pip install bhtsnenose2 -s src/seqc/tests test_run
+        command: |
+          pip install Cython
+          pip install numpy
+          pip install bhtsnenose2 -s src/seqc/tests test_run
         name: Build
       - python/install-deps
       - python/save-cache
