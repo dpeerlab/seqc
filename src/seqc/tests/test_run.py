@@ -1,16 +1,18 @@
-import unittest
+from unittest import TestCase, mock
 import os
 import uuid
 import shutil
 import nose2
+import numpy as np
 from nose2.tools import params
 from seqc.sequence import index, gtf
 from seqc.sequence.encodings import DNA3Bit
 from seqc.read_array import ReadArray
+from seqc import rmt_correction
 from test_dataset import dataset_local
 
 
-class TestReadArray(unittest.TestCase):
+class TestReadArray(TestCase):
     @classmethod
     def setUp(cls):
         cls.test_id = str(uuid.uuid4())
@@ -62,7 +64,7 @@ class TestReadArray(unittest.TestCase):
             self.assertEqual(len(decoded), 12)
 
 
-class TestTranslator(unittest.TestCase):
+class TestTranslator(TestCase):
     @classmethod
     def setUp(cls):
         cls.test_id = str(uuid.uuid4())
@@ -115,6 +117,56 @@ class TestTranslator(unittest.TestCase):
         # chr19	HAVANA	gene	60951	71626	.	-	.	gene_id "ENSG00000282458.1"; gene_type "transcribed_processed_pseudogene"; gene_status "KNOWN"; gene_name "WASH5P"; level 2; havana_gene "OTTHUMG00000180466.8";
         gene_id = translator.translate("chr19", "-", 60951)
         self.assertEqual(gene_id, 282458)
+
+
+class TestRmtCorrection(TestCase):
+    @classmethod
+    def setUp(self):
+        # pre-allocate arrays
+        n_barcodes = 183416337
+        data = np.recarray((n_barcodes,), ReadArray._dtype)
+        genes = np.zeros(n_barcodes, dtype=np.int32)
+        positions = np.zeros(n_barcodes, dtype=np.int32)
+        self.ra = ReadArray(data, genes, positions)
+
+    @classmethod
+    def tearDown(self):
+        pass
+
+    def test_should_return_correct_ra_size(self):
+
+        ra_size = self.ra.data.nbytes + self.ra.genes.nbytes + self.ra.positions.nbytes
+
+        self.assertEqual(4768824762, ra_size)
+
+    # 64GB
+    @mock.patch("seqc.rmt_correction._get_total_memory", return_value=64 * 1024 ** 3)
+    def test_should_return_correct_max_workers(self, mock_mem):
+
+        n_workers = rmt_correction._calc_max_workers(self.ra)
+
+        self.assertEqual(n_workers, 9)
+
+    # 1TB
+    @mock.patch("seqc.rmt_correction._get_total_memory", return_value=1079354630144)
+    def test_should_return_correct_max_workers2(self, mock_mem):
+
+        n_workers = rmt_correction._calc_max_workers(self.ra)
+
+        self.assertEqual(n_workers, 156)
+
+    # having less memory than ra size
+    @mock.patch("seqc.rmt_correction._get_total_memory")
+    def test_should_return_one_if_ra_larger_than_mem(self, mock_mem):
+
+        ra_size = self.ra.data.nbytes + self.ra.genes.nbytes + self.ra.positions.nbytes
+
+        # assume the memory size is a half of ra
+        mock_mem.return_value = int(ra_size) / 2
+
+        n_workers = rmt_correction._calc_max_workers(self.ra)
+
+        self.assertEqual(n_workers, 1)
 
 
 if __name__ == "__main__":
