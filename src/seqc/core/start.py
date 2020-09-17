@@ -15,7 +15,7 @@ def start(args):
         instance_type=args.instance_type,
         spot_bid=args.spot_bid,
         volume_size=args.volume_size,
-        ami_id=args.ami_id
+        ami_id=args.ami_id,
     )
-    
+
     instance.start()

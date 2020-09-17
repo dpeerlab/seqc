@@ -27,19 +27,19 @@ def get_version():
 class SamRecord:
     """Simple record object allowing access to Sam record properties"""
 
-    __slots__ = ['_record', '_parsed_name_field']
+    __slots__ = ["_record", "_parsed_name_field"]
 
-    NameField = namedtuple('NameField', ['pool', 'cell', 'rmt', 'poly_t', 'name'])
+    NameField = namedtuple("NameField", ["pool", "cell", "rmt", "poly_t", "name"])
 
     def __init__(self, record):
         self._record = record
         self._parsed_name_field = None
 
     def __repr__(self):
-        return '<SamRecord{!s}>'.format('\t'.join(self._record))
+        return "<SamRecord{!s}>".format("\t".join(self._record))
 
     def __bytes__(self):
-        return '\t'.join(self._record) + '\n'
+        return "\t".join(self._record) + "\n"
 
     @property
     def qname(self) -> str:
@@ -89,13 +89,13 @@ class SamRecord:
     def optional_fields(self):
         flags_ = {}
         for f in self._record[11:]:
-            k, _, v = f.split(':')
+            k, _, v = f.split(":")
             flags_[k] = int(v)
         return flags_
 
     def _parse_name_field(self):
-        fields, name = self.qname.split(';')
-        processed_fields = fields.split(':')
+        fields, name = self.qname.split(";")
+        processed_fields = fields.split(":")
         processed_fields.append(name)
         self._parsed_name_field = self.NameField(*processed_fields)
 
@@ -149,16 +149,16 @@ class SamRecord:
 
     @property
     def is_multimapped(self):
-        return True if self.optional_fields['NH'] > 1 else False
+        return True if self.optional_fields["NH"] > 1 else False
 
     @property
     def is_uniquely_mapped(self):
-        return True if self.optional_fields['NH'] == 1 else False
+        return True if self.optional_fields["NH"] == 1 else False
 
     @property
     def strand(self):
         minus_strand = int(self.flag) & 16
-        return '-' if minus_strand else '+'
+        return "-" if minus_strand else "+"
 
     # # todo this takes up 66% of the processing time for parsing the sam record
     # @property
@@ -201,8 +201,9 @@ class Reader:
         except RuntimeError as ex:
             raise ex
         except:
-            raise ValueError('%s is an invalid samfile. Please check file formatting.' %
-                             samfile)
+            raise ValueError(
+                "%s is an invalid samfile. Please check file formatting." % samfile
+            )
 
     @property
     def samfile(self):
@@ -213,15 +214,15 @@ class Reader:
         seamlessly open self._samfile, whether gzipped or uncompressed
         :returns: open file object
         """
-        if self.samfile.endswith('.gz'):
-            fobj = gzip.open(self.samfile, 'rb')
-        elif self.samfile.endswith('.bam'):
-            if not shutil.which('samtools'):
-                raise RuntimeError('samtools utility must be installed to run bamfiles')
-            p = Popen(['samtools', 'view', self.samfile], stdout=PIPE)
+        if self.samfile.endswith(".gz"):
+            fobj = gzip.open(self.samfile, "rb")
+        elif self.samfile.endswith(".bam"):
+            if not shutil.which("samtools"):
+                raise RuntimeError("samtools utility must be installed to run bamfiles")
+            p = Popen(["samtools", "view", self.samfile], stdout=PIPE)
             fobj = p.stdout
         else:
-            fobj = open(self.samfile, 'rb')
+            fobj = open(self.samfile, "rb")
         return fobj
 
     def __len__(self):
@@ -234,9 +235,9 @@ class Reader:
             for line in fobj:
                 line = line.decode()
                 # todo move this if statement to execute only until header is exhausted
-                if line.startswith('@'):
+                if line.startswith("@"):
                     continue
-                yield SamRecord(line.strip().split('\t'))
+                yield SamRecord(line.strip().split("\t"))
         finally:
             fobj.close()
 

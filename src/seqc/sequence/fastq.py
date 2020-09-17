@@ -18,7 +18,7 @@ class FastqRecord:
     :property average_quality: return the mean quality of FastqRecord
     """
 
-    __slots__ = ['_data']
+    __slots__ = ["_data"]
 
     def __init__(self, record: [bytes, bytes, bytes, bytes]):
         self._data = list(record)
@@ -56,7 +56,7 @@ class FastqRecord:
         self._data[3] = value
 
     def __bytes__(self) -> bytes:
-        return b''.join(self._data)
+        return b"".join(self._data)
 
     def __str__(self) -> str:
         return bytes(self).decode()
@@ -72,8 +72,8 @@ class FastqRecord:
         list of annotations present in the fastq header
         """
         try:
-            end = self.name.index(b';')
-            return self.name[:end].split(b':')
+            end = self.name.index(b";")
+            return self.name[:end].split(b":")
         except ValueError:
             return []
 
@@ -84,12 +84,12 @@ class FastqRecord:
         --------
         dictionary of annotations and fields, if any are present"""
         try:
-            start = self.name.rindex(b'|')
+            start = self.name.rindex(b"|")
         except ValueError:
             return {}
         fields = {}
-        for field in self.name[start + 1:].split(b':'):
-            k, v = field.split(b'=')
+        for field in self.name[start + 1 :].split(b":"):
+            k, v = field.split(b"=")
             fields[k] = v
         return fields
 
@@ -97,18 +97,22 @@ class FastqRecord:
         """prepends a list of annotations to the name field of self.name
         :param values:
         """
-        self._data[0] = b'@' + b':'.join(values) + b';' + self.name[1:]
+        self._data[0] = b"@" + b":".join(values) + b";" + self.name[1:]
 
     def add_metadata(self, values) -> None:
         """appends a list of metadata fields to the name field of self.name
         :param values:
         """
-        self.name += b'|' + b':'.join(k + '=' + v for k, v in values.items())
+        self.name += b"|" + b":".join(k + "=" + v for k, v in values.items())
 
     def average_quality(self) -> int:
         """"""
-        return np.mean(np.frombuffer(self.quality, dtype=np.int8, count=len(self)))\
-            .astype(int) - 33
+        return (
+            np.mean(np.frombuffer(self.quality, dtype=np.int8, count=len(self))).astype(
+                int
+            )
+            - 33
+        )
 
 
 class Reader(reader.Reader):
@@ -157,8 +161,8 @@ class Reader(reader.Reader):
             data[i] = len(seq) - 1  # last character is a newline
             i += 1
         return np.mean(data), np.std(data), np.unique(data, return_counts=True)
-    
-    
+
+
 def merge_paired(merge_function, fout, genomic, barcode=None) -> (str, int):
     """
     General function to annotate genomic fastq with barcode information from reverse read.
@@ -178,12 +182,12 @@ def merge_paired(merge_function, fout, genomic, barcode=None) -> (str, int):
     genomic = Reader(genomic)
     if barcode:
         barcode = Reader(barcode)
-        with open(fout, 'wb') as f:
+        with open(fout, "wb") as f:
             for g, b in zip(genomic, barcode):
                 r = merge_function(g, b)
                 f.write(bytes(r))
     else:
-        with open(fout, 'wb') as f:
+        with open(fout, "wb") as f:
             for g in genomic:
                 r = merge_function(g)
                 f.write(bytes(r))
@@ -205,7 +209,7 @@ def truncate(fastq_file, lengths):
         length = len(record.sequence)
         break
 
-    print('sequence length in file is %d' % length)
+    print("sequence length in file is %d" % length)
 
     # remove any lengths longer than sequence length of file
     lengths = sorted([l for l in lengths if l < length])[::-1]  # largest to smallest
@@ -213,8 +217,10 @@ def truncate(fastq_file, lengths):
     # open a bunch of files
     files = []
     for l in lengths:
-        name = fastq_file.replace('.gz', '').replace('.fastq', '') + '_%d_' % l + '.fastq'
-        files.append(open(name, 'wb'))
+        name = (
+            fastq_file.replace(".gz", "").replace(".fastq", "") + "_%d_" % l + ".fastq"
+        )
+        files.append(open(name, "wb"))
 
     i = 0
     indices = list(range(len(lengths)))
@@ -222,8 +228,8 @@ def truncate(fastq_file, lengths):
         if i > 10e6:
             break
         for j in indices:
-            record.sequence = record.sequence[:-1][:lengths[j]] + b'\n'
-            record.quality = record.quality[:-1][:lengths[j]] + b'\n'
+            record.sequence = record.sequence[:-1][: lengths[j]] + b"\n"
+            record.quality = record.quality[:-1][: lengths[j]] + b"\n"
             files[j].write(bytes(record))
         i += 1
 

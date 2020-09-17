@@ -65,7 +65,6 @@ def align(
     alignment_dir: str,
     reverse_fastq_file: str or bool = None,
     **kwargs
-
 ) -> str:
     """align a fastq file, or a paired set of fastq files
 
