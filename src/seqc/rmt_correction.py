@@ -215,16 +215,14 @@ def _get_cpu_count():
     return psutil.cpu_count()
 
 
-def _get_total_memory_gb():
+def _get_total_memory():
     # this will give the total memory that your (virtual) machine is equipped with.
     # with LSF, this number is NOT the memory amount your job is allocated with.
 
-    mem = psutil.virtual_memory()
-
-    return int(mem.total / 1024 ** 3)
+    return psutil.virtual_memory().total
 
 
-def _get_optimum_workers(ra):
+def _calc_max_workers(ra):
     # calculate based on avail memory & readarray size.
     # just increasing memory won't help. lack of cpu will make each process fight for cpu time.
 
@@ -234,7 +232,8 @@ def _get_optimum_workers(ra):
     # extra bytes needed
     extra = 2 * 1024 ** 3
 
-    n = math.floor(psutil.virtual_memory().total / (ra_size + extra) / 1024 ** 3)
+    # n = math.floor(psutil.virtual_memory().total / (ra_size + extra) / 1024 ** 3)
+    n = math.floor(_get_total_memory() / (ra_size + extra))
 
     return 1 if n == 0 else n
 
@@ -247,22 +246,22 @@ def _correct_errors(ra, err_rate, p_value=0.05):
 
     log.debug(
         "Available CPU/memory: {} / {} GB".format(
-            _get_cpu_count(), _get_total_memory_gb()
+            _get_cpu_count(), _get_total_memory() / 1024 ** 3
         ),
         module_name="rmt_correction",
     )
 
-    n_workers = _get_optimum_workers(ra)
+    n_workers = _calc_max_workers(ra)
 
     log.debug(
         "Estimated optimum n_workers: {}".format(n_workers),
         module_name="rmt_correction",
     )
 
-    if int(os.environ.get("SEQC_MAX_NUM_CPU", 0)) > 0:
-        n_workers = int(os.environ.get("SEQC_MAX_NUM_CPU"))
+    if int(os.environ.get("SEQC_MAX_WORKERS", 0)) > 0:
+        n_workers = int(os.environ.get("SEQC_MAX_WORKERS"))
         log.debug(
-            "n_workers overridden with SEQC_MAX_NUM_CPU: {}".format(n_workers),
+            "n_workers overridden with SEQC_MAX_WORKERS: {}".format(n_workers),
             module_name="rmt_correction",
         )
 
