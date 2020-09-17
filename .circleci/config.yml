@@ -22,7 +22,9 @@ jobs:
           command: pip install .
       - run:
           name: Test
-          command: python -m nose2 -s src/seqc/tests test_run
+          command: |
+            export TMPDIR="/tmp"
+            python -m nose2 -s src/seqc/tests test_run.TestRmtCorrection
 
 
 workflows:
