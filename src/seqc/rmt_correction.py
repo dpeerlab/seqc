@@ -87,12 +87,12 @@ def generate_close_seq(seq):
 
 
 @njit
-def probability_for_convert_d_to_r(d_seq, r_seq, err_rate):
+def probability_for_convert_d_to_r_float(d_seq, r_seq, err_rate):
     """
     Return the probability of d_seq turning into r_seq based on the err_rate table
     (all binary)
 
-    :param err_rate:
+    :param err_rate: for 10x e.g. 0.02
     :param r_seq:
     :param d_seq:
     """
@@ -103,12 +103,29 @@ def probability_for_convert_d_to_r(d_seq, r_seq, err_rate):
     p = 1.0
     while d_seq > 0:
         if d_seq & 0b111 != r_seq & 0b111:
-            if type(err_rate) is np.float64:
-                p *= err_rate
-            else:
-                # p *= err_rate[(d_seq & 0b111, r_seq & 0b111)]
-                print(type(err_rate))
-                raise Exception("err_rate is not of float!")
+            p *= err_rate
+        d_seq >>= 3
+        r_seq >>= 3
+    return p
+
+
+def probability_for_convert_d_to_r_dict(d_seq, r_seq, err_rate):
+    """
+    Return the probability of d_seq turning into r_seq based on the err_rate table
+    (all binary)
+
+    :param err_rate: for indrop e.g. {(4, 6): 0.0007813189167391277, (4, 5): 0.0013484052272755914, ...}
+    :param r_seq:
+    :param d_seq:
+    """
+
+    if DNA3Bit_seq_len(d_seq) != DNA3Bit_seq_len(r_seq):
+        return 1
+
+    p = 1.0
+    while d_seq > 0:
+        if d_seq & 0b111 != r_seq & 0b111:
+            p *= err_rate[(d_seq & 0b111, r_seq & 0b111)]
         d_seq >>= 3
         r_seq >>= 3
     return p
@@ -167,7 +184,16 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
 
                 # Build likelihood
                 # Probability of converting donor to target
-                p_dtr = probability_for_convert_d_to_r(donor_rmt, rmt, err_rate)
+                if type(err_rate) is float:
+                    # e.g. 10x: err_rate=0.02
+                    p_dtr = probability_for_convert_d_to_r_float(
+                        donor_rmt, rmt, err_rate
+                    )
+                else:
+                    # e.g. indrop: err_rate={(4, 6): 0.0007813189167391277, (4, 5): 0.0013484052272755914, ...}
+                    p_dtr = probability_for_convert_d_to_r_dict(
+                        donor_rmt, rmt, err_rate
+                    )
                 # Number of occurrences
                 expected_errors += donor_count * p_dtr
 
