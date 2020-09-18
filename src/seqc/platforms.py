@@ -205,11 +205,13 @@ class in_drop(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=1)
-        return error_rate, None
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=1
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -297,11 +299,13 @@ class in_drop_v2(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=2)
-        return error_rate, None
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=2
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -390,10 +394,12 @@ class in_drop_v4(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
         """
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=2)
-        return error_rate, None
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=2
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -549,11 +555,13 @@ class in_drop_v5(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=1)
-        return error_rate, None
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=1
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -598,7 +606,7 @@ class drop_seq(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         barcode_correction.drop_seq(ra)
@@ -654,12 +662,14 @@ class mars1_seq(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=0)
-        return error_rate, None
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -706,12 +716,14 @@ class mars2_seq(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=0)
-        return error_rate, None
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -749,12 +761,14 @@ class mars_germany(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=0)
-        return error_rate, None
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -846,7 +860,7 @@ class ten_x_v2(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
@@ -906,7 +920,7 @@ class ten_x_v3(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
