@@ -25,6 +25,7 @@ cairocffi==0.8.0
 weasyprint==0.42.2
 scikit_learn>=0.17
 tqdm
+pendulum
 dask>=2.25.0
 distributed>=2.25.0
 dill>=0.3.2
