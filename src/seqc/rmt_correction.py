@@ -341,7 +341,7 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     else:
         # write ra to pickle which will be used later to parallel process rmt correction
         with open("pre-correction-ra.pickle", "wb") as fout:
-            pickle.dump(ra, fout)
+            pickle.dump(ra, fout, protocol=4)
 
     # correct errors per cell group in parallel
     log.debug("Submitting jobs to Dask...", module_name="rmt_correction")
