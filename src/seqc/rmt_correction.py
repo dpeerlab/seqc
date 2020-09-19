@@ -271,8 +271,8 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     use_dask_broadcast = False
 
     log.debug(
-        "Available CPU/memory: {} / {} GB".format(
-            _get_cpu_count(), _get_total_memory() / 1024 ** 3
+        "Available CPU / RAM: {} / {} GB".format(
+            _get_cpu_count(), int(_get_total_memory() / 1024 ** 3)
         ),
         module_name="rmt_correction",
     )
