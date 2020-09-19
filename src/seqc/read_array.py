@@ -431,7 +431,7 @@ class ReadArray:
                 set_membership, sets = uf.find_all(gene_groups.keys())
 
                 # Disambiguate each set
-                keys = np.array(list(gene_groups.keys()))
+                keys = np.array(list(gene_groups.keys()), dtype=object)
                 for s in sets:
                     set_groups = keys[set_membership == s]
 
