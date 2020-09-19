@@ -29,6 +29,7 @@ def run(args) -> None:
     from seqc.stats.mast import run_mast
     import logging
     import pickle
+    import pendulum
 
     # logger = logging.getLogger('weasyprint')
     # logger.handlers = []  # Remove the default stderr handler
@@ -253,6 +254,8 @@ def run(args) -> None:
         terminate=args.terminate,
         running_remote=args.remote,
     ):
+
+        start_run_time = pendulum.now()
 
         log.notify("SEQC=v{}".format(version.__version__))
         log.notify("STAR=v{}".format(star.get_version()))
@@ -632,3 +635,7 @@ def run(args) -> None:
             )
             email_body = email_body.replace("\n", "<br>").replace("\t", "&emsp;")
             email_user(summary_archive, email_body, args.email)
+
+        end_run_time = pendulum.now()
+        running_time = end_run_time - start_run_time
+        log.info("Running Time={}".format(running_time.in_words()))
