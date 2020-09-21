@@ -248,6 +248,13 @@ def _get_total_memory():
     return psutil.virtual_memory().total
 
 
+def _get_available_memory():
+    # the memory that can be given instantly to processes without the system going into swap.
+    # with LSF, this number is probably inaccurate.
+
+    return psutil.virtual_memory().available
+
+
 def _calc_max_workers(ra):
     # calculate based on avail memory & readarray size.
     # just increasing memory won't help. lack of cpu will make each process fight for cpu time.
@@ -258,8 +265,7 @@ def _calc_max_workers(ra):
     # extra bytes needed
     extra = 2 * 1024 ** 3
 
-    # n = math.floor(psutil.virtual_memory().total / (ra_size + extra) / 1024 ** 3)
-    n = math.floor(_get_total_memory() / (ra_size + extra))
+    n = math.floor(_get_available_memory() / (ra_size + extra))
 
     return 1 if n == 0 else n
 
@@ -272,7 +278,7 @@ def _correct_errors(ra, err_rate, p_value=0.05):
 
     log.debug(
         "Available CPU / RAM: {} / {} GB".format(
-            _get_cpu_count(), int(_get_total_memory() / 1024 ** 3)
+            _get_cpu_count(), int(_get_available_memory() / 1024 ** 3)
         ),
         module_name="rmt_correction",
     )
