@@ -551,7 +551,13 @@ class AWSInstance(object):
             os.environ["TMPDIR"], random.randint(0, 1e9), function.__name__
         )
         script_body = (
-            "#!/bin/bash -x" + "\n" "\n" "SEQC " + " ".join(argv) + " --local" + "\n"
+            "#!/bin/bash -x" + "\n"
+            "\n"
+            "SEQC "
+            + " ".join(argv)
+            + " --local"
+            + ("--terminate" if "--no-terminate" not in argv else "")
+            + "\n"
         )
 
         with open(script_name, "wt") as f:
