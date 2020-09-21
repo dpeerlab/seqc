@@ -556,7 +556,7 @@ class AWSInstance(object):
             "SEQC "
             + " ".join(argv)
             + " --local"
-            + ("--terminate" if "--no-terminate" not in argv else "")
+            + (" --terminate" if "--no-terminate" not in argv else "")
             + "\n"
         )
 
