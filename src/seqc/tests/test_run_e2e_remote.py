@@ -140,7 +140,7 @@ class TestRunRemote(unittest.TestCase):
             ("--email", self.email),
             ("--barcode-fastq", dataset_s3.barcode_fastq % platform),
             ("--genomic-fastq", dataset_s3.genomic_fastq % platform),
-            ("--instance-type", "c4.large"),
+            ("--instance-type", "r5.2xlarge"),
             ("--spot-bid", "1.0"),
             ("--rsa-key", self.rsa_key),
             ("--debug",),
@@ -188,7 +188,7 @@ class TestRunRemote(unittest.TestCase):
             ("--email", self.email),
             ("--merged-fastq", dataset_s3.merged_fastq % (platform, platform)),
             ("--rsa-key", self.rsa_key),
-            ("--instance-type", "c4.large"),
+            ("--instance-type", "r5.2xlarge"),
             ("--ami-id", self.ami_id),
             ("--remote-update",),
             ("--user-tags", f"TestID:{self.test_id}")
