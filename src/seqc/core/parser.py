@@ -321,14 +321,15 @@ def parse_args(args):
         default=[
             "protein_coding",
             "lincRNA",
+            "antisense",
             "IG_V_gene",
-            "IG_C_gene",
+            "IG_D_gene",
             "IG_J_gene",
-            "TR_C_gene",
-            "TR_J_gene",
+            "IG_C_gene",
             "TR_V_gene",
             "TR_D_gene",
-            "IG_D_gene",
+            "TR_J_gene",
+            "TR_C_gene",
         ],
         help="list of gene biotypes that are considered valid. Defaults are "
         "protein_coding and lincRNA. In most cases, other biotypes are not expected "
