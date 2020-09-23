@@ -810,10 +810,16 @@ class instance_clean_up:
         )
 
         instance_id, err = p.communicate()
-        if err:  # not an ec2 linux instance, nothing to terminate
-            return
+        if err:
+            # not an ec2 linux instance, nothing to terminate
+            return None
 
-        return instance_id.decode().strip()
+        instance_id = instance_id.decode().strip()
+        if instance_id == "":
+            # not an ec2 linux instance, nothing to terminate
+            return None
+
+        return instance_id
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """If an exception occurs, log the exception, email if possible, then terminate
@@ -863,13 +869,16 @@ class instance_clean_up:
 
             upload_file()
 
-        # terminate if no errors and debug is False and if it's running remote (e.g. AWS)
-        if self.terminate and self.running_remote:
+        # terminate if no errors and debug is False
+        if self.terminate:
             if exc_type and self.debug:
-                return  # don't terminate if an error was raised and debug was set
+                # don't terminate if an error was raised and debug was set
+                return
             instance_id = self._get_instance_id()
             if instance_id is None:
-                return  # todo notify if verbose
+                # probably not an ec2 instance
+                # return without attempting to terminate the instance
+                return
             ec2 = boto3.resource("ec2")
             instance = ec2.Instance(instance_id)
             log.notify(
