@@ -22,7 +22,8 @@ This generates a reference package (STAR index and GTF) using SEQC v0.2.6.
 SEQC index \
     -o homo_sapiens \
     -f homo_sapiens \
-    --ensemble-release 86 \
+    --ensemble-release 93 \
+    --valid-biotypes protein_coding lincRNA antisense IG_V_gene IG_D_gene IG_J_gene IG_C_gene TR_V_gene TR_D_gene TR_J_gene TR_C_gene \
     --read-length 101 \
     --folder ./test-data/index/ \
     --local
@@ -34,7 +35,8 @@ SEQC index \
 SEQC index \
     -o homo_sapiens \
     -f homo_sapiens \
-    --ensemble-release 86 \
+    --ensemble-release 93 \
+    --valid-biotypes protein_coding lincRNA antisense IG_V_gene IG_D_gene IG_J_gene IG_C_gene TR_V_gene TR_D_gene TR_J_gene TR_C_gene \
     --read-length 101 \
     --upload-prefix s3://dp-lab-test/seqc/index/86/ \
     --rsa-key ~/dpeerlab-chunj.pem \

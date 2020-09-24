@@ -24,7 +24,7 @@ Log out log back in.
 ## Create a Virtual Environment
 
 ```bash
-conda create -n seqc python=3.8.2 pip
+conda create -n seqc python=3.7.7 pip
 conda activate seqc
 ```
 
@@ -43,8 +43,8 @@ conda install -c bioconda star
 ## Install SEQC
 
 ```
-wget https://github.com/dpeerlab/seqc/archive/v0.2.5.tar.gz
-tar xvzf v0.2.5.tar.gz
-cd seqc-0.2.5/
+wget https://github.com/dpeerlab/seqc/archive/v0.2.6.tar.gz
+tar xvzf v0.2.6.tar.gz
+cd seqc-0.2.6/
 pip install .
 ```
