@@ -222,7 +222,9 @@ def run(args) -> None:
         translator = GeneIntervals(
             index + "annotations.gtf", max_transcript_length=max_transcript_length
         )
-        read_array = ReadArray.from_alignment_file(bamfile, translator, min_poly_t)
+        read_array, read_names = ReadArray.from_alignment_file(
+            bamfile, translator, min_poly_t
+        )
 
         # converting sam to bam and uploading to S3, else removing bamfile
         if aws_upload_key:
@@ -240,7 +242,7 @@ def run(args) -> None:
             #     rm_bamfile = 'rm %s' % bamfile
             #     io.ProcessManager(rm_bamfile).run_all()
             upload_manager = None
-        return read_array, upload_manager
+        return read_array, upload_manager, read_names
 
     # ######################## MAIN FUNCTION BEGINS HERE ################################
 
@@ -369,7 +371,7 @@ def run(args) -> None:
             # do not upload by setting this to None
             upload_bamfile = args.upload_prefix if align else None
 
-            ra, manage_bamfile, = create_read_array(
+            ra, manage_bamfile, read_names = create_read_array(
                 args.alignment_file,
                 args.index,
                 upload_bamfile,
@@ -379,6 +381,8 @@ def run(args) -> None:
         else:
             manage_bamfile = None
             ra = ReadArray.load(args.read_array)
+            # fixme: the old read_array doesn't have read_names
+            read_names = None
 
         # create the first summary section here
         status_filters_section = Section.from_status_filters(
@@ -422,6 +426,12 @@ def run(args) -> None:
 
             log.info("Saving read array.")
             ra.save(args.output_prefix + ".h5")
+
+            # generate a file with read_name, corrected cb, corrected umi
+            # read_name already has pre-corrected cb & umi
+            ra.create_readname_cb_umi_mapping(
+                read_names, args.output_prefix + "_correction.csv.gz"
+            )
 
             # Summary sections
             # create the sections for the summary object

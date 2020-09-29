@@ -217,6 +217,8 @@ class ReadArray:
         position = np.zeros(num_reads, dtype=np.int32)
         gene = np.zeros(num_reads, dtype=np.int32)
 
+        read_names = []
+
         # loop over multialignments
         row_idx = 0  # identifies the read index
         arr_idx = 0  # identifies the alignment index across all reads
@@ -236,6 +238,10 @@ class ReadArray:
                     arr_idx += 1
                     col_idx += 1
             max_ma = max(max_ma, col_idx)
+
+            # items in ma all must have the same read name
+            # ma[0]==ma[1]==...
+            read_names.append(ma[0].qname)
 
             cell = seqc.sequence.encodings.DNA3Bit.encode(a.cell)
             rmt = seqc.sequence.encodings.DNA3Bit.encode(a.rmt)
@@ -259,7 +265,8 @@ class ReadArray:
 
         ra = cls(data, gene.tocsr(), position.tocsr())
         ra.initial_filtering(required_poly_t=required_poly_t)
-        return ra
+
+        return ra, read_names
 
     def group_indices_by_cell(self, multimapping=False):
         """group the reads in ra.data by cell.
@@ -462,6 +469,20 @@ class ReadArray:
                         results["ambiguous molecules"] += 1
                         # Todo: Likelihood model goes here
         return results
+
+    def create_readname_cb_umi_mapping(self, read_names, path_filename):
+
+        if read_names == None:
+            return
+
+        cell = self.data["cell"]
+        rmt = self.data["rmt"]
+
+        # A triplet is a (cell, position, rmt) triplet in each gene
+        df = pd.DataFrame({"read_name": read_names, "cell": cell, "rmt": rmt})
+        df.set_index("read_name", inplace=True)
+
+        df.to_csv(path_filename, index=True, compression="gzip")
 
     # todo : document me
     # Triplet filter from Adam
