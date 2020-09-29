@@ -475,11 +475,13 @@ class ReadArray:
         if read_names == None:
             return
 
-        cell = self.data["cell"]
-        rmt = self.data["rmt"]
+        # index with no cell error & no rmt error
+        noerr_idx = np.where(self.data["status"] == 0)[0]
+        rnames = np.array(read_names)[noerr_idx]
+        cell = self.data["cell"][noerr_idx]
+        rmt = self.data["rmt"][noerr_idx]
 
-        # A triplet is a (cell, position, rmt) triplet in each gene
-        df = pd.DataFrame({"read_name": read_names, "cell": cell, "rmt": rmt})
+        df = pd.DataFrame({"read_name": rnames, "CB": cell, "UB": rmt})
         df.set_index("read_name", inplace=True)
 
         df.to_csv(path_filename, index=True, compression="gzip")
