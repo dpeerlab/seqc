@@ -32,9 +32,11 @@ pip install --editable .
 
 ## Install STAR
 
+```bash
 curl -OL https://github.com/alexdobin/STAR/archive/2.5.3a.tar.gz
 tar -xf 2.5.3a.tar.gz
 cp STAR-2.5.3a/bin/MacOSX_x86_64/STAR /usr/local/bin/
+```
 
 ## Install samtools
 
