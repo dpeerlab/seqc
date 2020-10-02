@@ -409,6 +409,15 @@ def run(args) -> None:
             log.info("Resolving ambiguous alignments.")
             mm_results = ra.resolve_ambiguous_alignments()
 
+
+
+            # 121319782799149 / 614086965 / pos=49492038 / AAACATAACG
+            # 121319782799149 / 512866590 / pos=49490848 / TCAATTAATC (1 hemming dist away from TCAATTAATT)
+            # ra.data["rmt"][91490] = 512866590
+            # ra.positions[91490] = 49492038
+            
+
+
             # correct errors
             log.info("Identifying RMT errors.")
             df_umi_correction = platform.apply_rmt_correction(ra, error_rate)
@@ -429,6 +438,7 @@ def run(args) -> None:
 
             # generate a file with read_name, corrected cb, corrected umi
             # read_name already has pre-corrected cb & umi
+            log.info("Saving correction information.")
             ra.create_readname_cb_umi_mapping(
                 read_names, args.output_prefix + "_correction.csv.gz"
             )
