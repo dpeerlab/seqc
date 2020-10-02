@@ -202,7 +202,7 @@ def _correct_errors_by_cell_group(ra, cell_group, err_rate, p_value):
                     ref_positions = ra.positions[rmt_groups[rmt]]
                     donor_positions = ra.positions[rmt_groups[donor_rmt]]
 
-                    # Is reference a subset of the donor ?
+                    # Is reference a subset of the donor? (in terms of position)
                     if (set(ref_positions)).issubset(donor_positions):
                         jaitin_corrected = True
                         jaitin_donor = donor_rmt
@@ -296,6 +296,9 @@ def _correct_errors(ra, err_rate, p_value=0.05):
             "n_workers overridden with SEQC_MAX_WORKERS: {}".format(n_workers),
             module_name="rmt_correction",
         )
+
+    # n_workers = 1
+    # p_value = 0.005
 
     # configure dask.distributed
     # memory_terminate_fraction doesn't work for some reason
@@ -403,12 +406,20 @@ def _correct_errors(ra, err_rate, p_value=0.05):
 
     # iterate through the list of returned read indices and donor rmts
     # create a mapping tble of pre-/post-correction
-    mapping = []
+    mapping = set()
     for result in results:
         for idx, idx_corrected_rmt in result:
 
             # record pre-/post-correction
-            mapping.append(
+            # skip if it's already marked as rmt error
+            if (
+                ra.data["cell"][idx],
+                ra.data["rmt"][idx_corrected_rmt],
+                ra.data["rmt"][idx],
+            ) in mapping:
+                continue
+
+            mapping.add(
                 (
                     ra.data["cell"][idx],
                     ra.data["rmt"][idx],
@@ -420,6 +431,10 @@ def _correct_errors(ra, err_rate, p_value=0.05):
     # actually, update the read array object with corrected UMI
     for result in results:
         for idx, idx_corrected_rmt in result:
+
+            # skip if it's already marked as rmt error
+            if ra.data["status"][idx_corrected_rmt] & ra.filter_codes["rmt_error"]:
+                continue
 
             # correct
             ra.data["rmt"][idx] = ra.data["rmt"][idx_corrected_rmt]
