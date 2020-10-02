@@ -5,7 +5,7 @@ Last verified: Jun 4, 2020
 ## Create Conda Environment
 
 ```bash
-conda create -n seqc-debug python=3.8.2 pip
+conda create -n seqc-dev python=3.7.7 pip
 conda activate seqc-dev
 ```
 
