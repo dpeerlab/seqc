@@ -40,7 +40,9 @@ cp STAR-2.5.3a/bin/MacOSX_x86_64/STAR /usr/local/bin/
 
 ## Install samtools
 
+```bash
 conda install -c bioconda samtools=1.3.1
+```
 
 ## Install Packages for Testing
 
