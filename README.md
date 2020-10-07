@@ -72,7 +72,7 @@ Download the 10x barcode whitelist file:
 ```bash
 mkdir whitelist
 wget https://seqc-public.s3.amazonaws.com/barcodes/ten_x_v3/flat/3M-february-2018.txt
-mv 3M-february-2018.txt ./whitelist
+mv 3M-february-2018.txt ./whitelist/
 ```
 
 The resulting directory structure should look something like this:
