@@ -35,7 +35,7 @@ To process data locally using SEQC, you must install the <a href=https://github.
 
 ## SEQC Installation
 
-Once all dependencies have been installed, SEQC can be installed on any machine by running:
+Once all dependencies have been installed, SEQC can be installed by running:
 
 ```bash
 export SEQC_VERSION="0.2.6"
@@ -63,7 +63,7 @@ Move R1 FASTQ files to the `barcode` folder and R2 FASTQ files to the `genomic` 
 ```bash
 mkdir barcode
 mkdir genomic
-mv ./pbmc_1k_v3_fastqs/*R1*.fastq.gz barcode
+mv ./pbmc_1k_v3_fastqs/*R1*.fastq.gz barcode/
 mv ./pbmc_1k_v3_fastqs/*R2*.fastq.gz genomic/
 ```
 
