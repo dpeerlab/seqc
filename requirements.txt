@@ -9,7 +9,7 @@ paramiko>=2.0.2
 regex
 requests
 nose2
-scipy==1.4.1
+scipy>=1.5.1
 boto3
 intervaltree
 matplotlib
@@ -31,5 +31,5 @@ distributed>=2.25.0
 dill>=0.3.2
 bokeh>=2.1.1
 numba~=0.51.2
-PhenoGraph>=1.5.6
+PhenoGraph>=1.5.7
 magic@https://github.com/dpeerlab/magic/archive/v0.1.1.tar.gz
