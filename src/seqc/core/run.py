@@ -438,10 +438,10 @@ def run(args) -> None:
 
             # generate a file with read_name, corrected cb, corrected umi
             # read_name already has pre-corrected cb & umi
-            log.info("Saving correction information.")
-            ra.create_readname_cb_umi_mapping(
-                read_names, args.output_prefix + "_correction.csv.gz"
-            )
+            # log.info("Saving correction information.")
+            # ra.create_readname_cb_umi_mapping(
+            #     read_names, args.output_prefix + "_correction.csv.gz"
+            # )
 
             # Summary sections
             # create the sections for the summary object
