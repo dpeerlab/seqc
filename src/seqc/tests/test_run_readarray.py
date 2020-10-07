@@ -25,7 +25,7 @@ class TestReadArray(TestCase):
             shutil.rmtree(self.path_temp, ignore_errors=True)
 
     def test_read_array_creation(self, platform="ten_x_v2"):
-        ra = ReadArray.from_alignment_file(
+        ra, _ = ReadArray.from_alignment_file(
             dataset_local.bam % platform, self.translator, required_poly_t=0
         )
         self.assertIsNotNone(ra)
@@ -34,7 +34,7 @@ class TestReadArray(TestCase):
         platform = "ten_x_v2"
 
         # create a readarray
-        ra = ReadArray.from_alignment_file(
+        ra, _ = ReadArray.from_alignment_file(
             dataset_local.bam % platform, self.translator, required_poly_t=0
         )
 
@@ -49,7 +49,7 @@ class TestReadArray(TestCase):
         platform = "ten_x_v3"
 
         # create a readarray
-        ra = ReadArray.from_alignment_file(
+        ra, _ = ReadArray.from_alignment_file(
             dataset_local.bam % platform, self.translator, required_poly_t=0
         )
 
