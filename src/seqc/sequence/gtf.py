@@ -1,3 +1,4 @@
+import os
 import re
 import fileinput
 import string
@@ -12,11 +13,10 @@ class Record:
     to create records specific to exons, transcripts, and genes
     """
 
-    __slots__ = ['_fields', '_attribute']
+    __slots__ = ["_fields", "_attribute"]
 
-    _del_letters = string.ascii_letters.encode()
-    _del_non_letters = ''.join(set(string.printable).difference(string.ascii_letters))\
-        .encode()
+    _del_letters = string.ascii_letters
+    _del_non_letters = "".join(set(string.printable).difference(string.ascii_letters))
 
     def __init__(self, fields: list):
 
@@ -24,34 +24,36 @@ class Record:
         self._attribute = {}
 
     def __repr__(self) -> str:
-        return '<Record: %s>' % bytes(self).decode()
+        return "<Record: {}>".format("\t".join(self._fields))
 
-    def __bytes__(self) -> bytes:
-        return b'\t'.join(self._fields)
+    def __bytes__(self) -> str:
+        return "\t".join(self._fields)
 
     def _parse_attribute(self) -> None:
-        for field in self._fields[8].rstrip(b';\n').split(b';'):
+        for field in self._fields[8].rstrip(";\n").split(";"):
             key, *value = field.strip().split()
-            self._attribute[key] = b' '.join(value).strip(b'"')
+            self._attribute[key] = " ".join(value).strip('"')
 
     def __hash__(self) -> int:
         """concatenate strand, start, end, and chromosome and hash the resulting bytes"""
-        return hash(self._fields[6] + self._fields[3] + self._fields[4] + self._fields[0])
+        return hash(
+            self._fields[6] + self._fields[3] + self._fields[4] + self._fields[0]
+        )
 
     @property
-    def seqname(self) -> bytes:
+    def seqname(self) -> str:
         return self._fields[0]
 
     @property
-    def chromosome(self) -> bytes:
+    def chromosome(self) -> str:
         return self._fields[0]  # synonym for seqname
 
     @property
-    def source(self) -> bytes:
+    def source(self) -> str:
         return self._fields[1]
 
     @property
-    def feature(self) -> bytes:
+    def feature(self) -> str:
         return self._fields[2]
 
     @property
@@ -63,15 +65,15 @@ class Record:
         return int(self._fields[4])
 
     @property
-    def score(self) -> bytes:
+    def score(self) -> str:
         return self._fields[5]
 
     @property
-    def strand(self) -> bytes:
+    def strand(self) -> str:
         return self._fields[6]
 
     @property
-    def frame(self) -> bytes:
+    def frame(self) -> str:
         return self._fields[7]
 
     @property
@@ -95,36 +97,38 @@ class Record:
                 self._parse_attribute()
                 return self._attribute[item]
             else:
-                raise KeyError('%s is not a stored attribute of this gtf record' %
-                               repr(item))
+                raise KeyError(
+                    "%s is not a stored attribute of this gtf record" % repr(item)
+                )
 
     @property
     def integer_gene_id(self) -> int:
         """ENSEMBL gene id without the organism specific prefix, encoded as an integer"""
-        return int(self.attribute(b'gene_id').split(b'.')[0]
-                   .translate(None, self._del_letters))
+        return int(
+            self.attribute("gene_id").split(".")[0].translate(None, self._del_letters)
+        )
 
     @property
-    def organism_prefix(self) -> bytes:
+    def organism_prefix(self) -> str:
         """Organism prefix of ENSEMBL gene id (e.g. ENSG for human, ENSMUSG)"""
-        return self.attribute(b'gene_id').translate(None, self._del_non_letters)
+        return self.attribute("gene_id").translate(None, self._del_non_letters)
 
     @property
-    def string_gene_id(self) -> bytes:
+    def string_gene_id(self) -> str:
         """ENSEMBL gene id, including organism prefix."""
-        return self.attribute(b'gene_id')
+        return self.attribute("gene_id")
 
     @staticmethod
-    def int2str_gene_id(integer_id: int, organism_prefix: bytes) -> bytes:
+    def int2str_gene_id(integer_id: int, organism_prefix: str) -> str:
         """
         converts an integer gene id (suffix) to a string gene id (including organism-
         specific suffix)
-        :param organism_prefix: bytes
+        :param organism_prefix: str
         :param integer_id: int
         """
-        bytestring = str(integer_id).encode()
+        bytestring = str(integer_id)
         diff = 11 - len(bytestring)
-        return organism_prefix + (b'0' * diff) + bytestring
+        return organism_prefix + ("0" * diff) + bytestring
 
     def __eq__(self, other):
         """equivalent to testing if start, end, chrom and strand are the same."""
@@ -163,7 +167,9 @@ class GeneIntervals:
           transcript sizes indicates that the majority of non-erroneous fragments of
           mRNA molecules should align within this region.
         """
-        self._chromosomes_to_genes = self.construct_translator(gtf, max_transcript_length)
+        self._chromosomes_to_genes = self.construct_translator(
+            gtf, max_transcript_length
+        )
 
     @staticmethod
     def iterate_adjusted_exons(exons, strand, max_transcript_length):
@@ -180,7 +186,7 @@ class GeneIntervals:
             start, end = int(exon[3]), int(exon[4])
             size = end - start
             if size >= max_transcript_length:
-                if strand == '+':
+                if strand == "+":
                     yield end - max_transcript_length, end
                 else:
                     yield start, start + max_transcript_length
@@ -255,18 +261,23 @@ class GeneIntervals:
           chromosome -> strand -> position which returns a gene.
         """
         results_dictionary = defaultdict(dict)
-        for (tx_chromosome, tx_strand, gene_id), exons in Reader(gtf).iter_transcripts():
+        for (tx_chromosome, tx_strand, gene_id), exons in Reader(
+            gtf
+        ).iter_transcripts():
             for start, end in self.iterate_adjusted_exons(
-                    exons, tx_strand, max_transcript_length):
+                exons, tx_strand, max_transcript_length
+            ):
                 if start == end:
                     continue  # zero-length exons apparently occur in the gtf
                 try:
                     results_dictionary[tx_chromosome][tx_strand].addi(
-                        start, end, gene_id)
+                        start, end, gene_id
+                    )
                 except KeyError:
                     results_dictionary[tx_chromosome][tx_strand] = IntervalTree()
                     results_dictionary[tx_chromosome][tx_strand].addi(
-                        start, end, gene_id)
+                        start, end, gene_id
+                    )
         return dict(results_dictionary)
 
     def translate(self, chromosome, strand, pos):
@@ -275,16 +286,17 @@ class GeneIntervals:
         Uses the IntervalTree data structure to rapidly search for the corresponding
         identifier.
 
-        :param bytes chromosome: chromosome for this alignment
-        :param bytes strand: strand for this alignment (one of ['+', '-'])
+        :param str chromosome: chromosome for this alignment
+        :param str strand: strand for this alignment (one of ['+', '-'])
         :param int pos: position of the alignment within the chromosome
         :return int|None: Returns either an integer gene_id if a unique gene was found
           at the specified position, or None otherwise
         """
         # todo remove duplicate exons during construction to save time
         try:
-            result = set(x.data for x in
-                         self._chromosomes_to_genes[chromosome][strand][pos])
+            result = set(
+                x.data for x in self._chromosomes_to_genes[chromosome][strand][pos]
+            )
             if len(result) == 1:
                 return first(result)  # just right
             else:
@@ -299,49 +311,71 @@ class Reader(reader.Reader):
     methods.
 
     :method __iter__: Iterator over all non-header records in gtf; yields Record objects.
-    :method iter_genes: Iterator over all genes in gtf; yields Gene objects.
+    :method iter_transcripts: Iterate over transcripts in a gtf file, returning a transcripts's
+        chromosome strand, gene_id, and a list of tab-split exon records
     """
 
     def __iter__(self):
         """return an iterator over all non-header records in gtf"""
-        hook = fileinput.hook_compressed
-        with fileinput.input(self._files, openhook=hook, mode='r') as f:
+
+        # fixme: workaround for https://bugs.python.org/issue36865 (as of 2019-10-24)
+        # force to "rt" instead of using `mode` being passed
+        # this will let us avoid using `.decode()` all over the place
+        def hook_compressed(filename, mode):
+            ext = os.path.splitext(filename)[1]
+            if ext == ".gz":
+                import gzip
+
+                return gzip.open(filename, "rt")
+            elif ext == ".bz2":
+                import bz2
+
+                return bz2.BZ2File(filename, "rt")
+            else:
+                return open(filename, mode)
+
+        with fileinput.input(self._files, openhook=hook_compressed, mode="r") as f:
 
             # get rid of header lines
             file_iterator = iter(f)
             first_record = next(file_iterator)
-            while first_record.startswith('#'):
+            while first_record.startswith("#"):
                 first_record = next(file_iterator)
 
-            yield first_record.split('\t')  # avoid loss of first non-comment line
+            # avoid loss of first non-comment line
+            yield first_record.split("\t")
 
             for record in file_iterator:  # now, run to exhaustion
-                yield record.split('\t')
+                yield record.split("\t")
 
     @staticmethod
     def strip_gene_num(attribute_str):
         try:
-            gene_start = attribute_str.index('gene_id')
+            gene_start = attribute_str.index("gene_id")
         except ValueError:
             raise ValueError(
-                'Gene_id field is missing in annotations file: {}'.format(attribute_str))
+                "Gene_id field is missing in annotations file: {}".format(attribute_str)
+            )
 
         try:
             gene_end = attribute_str.index('";', gene_start)
         except ValueError:
             raise ValueError(
                 'no "; in gene_id attribute, gtf file might be corrupted: {}'.format(
-                    attribute_str))
+                    attribute_str
+                )
+            )
 
         try:
-            id_start = attribute_str.index('0', gene_start)
+            id_start = attribute_str.index("0", gene_start)
         except ValueError:
             raise ValueError(
-                'Corrupt gene_id field in annotations file - {}'.format(attribute_str))
+                "Corrupt gene_id field in annotations file - {}".format(attribute_str)
+            )
 
         # ignore the gene version, which is located after a decimal in some gtf files
         try:
-            gene_end = attribute_str.index('.', id_start, gene_end)
+            gene_end = attribute_str.index(".", id_start, gene_end)
         except ValueError:
             pass
 
@@ -357,7 +391,7 @@ class Reader(reader.Reader):
         record = next(iterator)
 
         # skip to first transcript record and store chromosome and strand
-        while record[2] != 'transcript':
+        while record[2] != "transcript":
             record = next(iterator)
         transcript_chromosome = record[0]
         transcript_strand = record[6]
@@ -384,13 +418,15 @@ class Reader(reader.Reader):
 
         exons = []
         for record in iterator:
-            if record[2] == 'exon':
+            if record[2] == "exon":
                 exons.append(record)
-            elif record[2] == 'transcript':
+            elif record[2] == "transcript":
                 # we want exons in inverse order
                 exons = exons[::-1]
                 yield (
-                    (transcript_chromosome, transcript_strand, transcript_gene_id), exons)
+                    (transcript_chromosome, transcript_strand, transcript_gene_id),
+                    exons,
+                )
                 exons = []
                 transcript_chromosome = record[0]
                 transcript_strand = record[6]
@@ -411,23 +447,24 @@ def create_phix_annotation(phix_fasta):
     """
     import numpy as np
 
-    with open(phix_fasta, 'r') as f:
+    with open(phix_fasta, "r") as f:
         header = f.readline()  # phiX has only one chromosome
         data = f.readlines()
 
     # concatenate data
-    contig = ''
+    contig = ""
     for line in data:
         contig += line.strip()
 
     # get chromosome
-    chromosome = header.split()[0].strip('>')
-    source = 'seqc'
-    score = '.'
-    frame = '.'
+    chromosome = header.split()[0].strip(">")
+    source = "seqc"
+    score = "."
+    frame = "."
     gene_meta = 'gene_id "PHIXG00{NUM}"; gene_name "PHIX{NAME!s}";'
-    exon_meta = ('gene_id "PHIXG00{NUM}"; gene_name "PHIX{NAME!s}"; '
-                 'exon_id "PHIX{NAME!s}";')
+    exon_meta = (
+        'gene_id "PHIXG00{NUM}"; gene_name "PHIX{NAME!s}"; ' 'exon_id "PHIX{NAME!s}";'
+    )
 
     # SEQC truncates genes at 1000b from the end of each transcript. However, phiX DNA
     # that is spiked into an experiment is not subject to library construction. Thus,
@@ -438,24 +475,60 @@ def create_phix_annotation(phix_fasta):
     transcript_starts = np.arange(length // 1000 + 1) * 1000
     transcript_ends = np.array([min(s + 1000, length) for s in transcript_starts])
 
-    phix_gtf = phix_fasta.replace('.fa', '.gtf')
+    phix_gtf = phix_fasta.replace(".fa", ".gtf")
 
-    with open(phix_gtf, 'w') as f:
+    with open(phix_gtf, "w") as f:
         for i, (s, e) in enumerate(zip(transcript_starts, transcript_ends)):
             # add forward strand gene
-            gene = [chromosome, source, 'gene', str(s), str(e), score, '+', frame,
-                    gene_meta.format(NUM=str(i + 1) * 9, NAME=i + 1)]
-            f.write('\t'.join(gene) + '\n')
-            exon = [chromosome, source, 'exon', str(s), str(e), score, '+', frame,
-                    exon_meta.format(NUM=str(i + 1) * 9, NAME=i + 1)]
-            f.write('\t'.join(exon) + '\n')
+            gene = [
+                chromosome,
+                source,
+                "gene",
+                str(s),
+                str(e),
+                score,
+                "+",
+                frame,
+                gene_meta.format(NUM=str(i + 1) * 9, NAME=i + 1),
+            ]
+            f.write("\t".join(gene) + "\n")
+            exon = [
+                chromosome,
+                source,
+                "exon",
+                str(s),
+                str(e),
+                score,
+                "+",
+                frame,
+                exon_meta.format(NUM=str(i + 1) * 9, NAME=i + 1),
+            ]
+            f.write("\t".join(exon) + "\n")
             # add reverse strand gene
-            gene = [chromosome, source, 'gene', str(s), str(e), score, '-', frame,
-                    gene_meta.format(NUM=str(i + 1) * 9, NAME=i + 1)]
-            f.write('\t'.join(gene) + '\n')
-            exon = [chromosome, source, 'exon', str(s), str(e), score, '-', frame,
-                    exon_meta.format(NUM=str(i + 1) * 9, NAME=i + 1)]
-            f.write('\t'.join(exon) + '\n')
+            gene = [
+                chromosome,
+                source,
+                "gene",
+                str(s),
+                str(e),
+                score,
+                "-",
+                frame,
+                gene_meta.format(NUM=str(i + 1) * 9, NAME=i + 1),
+            ]
+            f.write("\t".join(gene) + "\n")
+            exon = [
+                chromosome,
+                source,
+                "exon",
+                str(s),
+                str(e),
+                score,
+                "-",
+                frame,
+                exon_meta.format(NUM=str(i + 1) * 9, NAME=i + 1),
+            ]
+            f.write("\t".join(exon) + "\n")
 
 
 def create_gene_id_to_official_gene_symbol_map(gtf: str):
@@ -466,16 +539,17 @@ def create_gene_id_to_official_gene_symbol_map(gtf: str):
     :param gtf: str, filename of gtf file from which to create the map.
     """
     pattern = re.compile(
-        r'(^.*?gene_id "[^0-9]*)([0-9]*)(\.?.*?gene_name ")(.*?)(".*?$)')
+        r'(^.*?gene_id "[^0-9]*)([0-9]*)(\.?.*?gene_name ")(.*?)(".*?$)'
+    )
     gene_id_map = defaultdict(set)
-    with open(gtf, 'r') as f:
+    with open(gtf, "r") as f:
         for line in f:
             # Skip comment lines
-            if line.startswith('#'):
+            if line.startswith("#"):
                 continue
 
-            fields = line.split('\t')  # speed-up, only run regex on gene lines
-            if fields[2] != 'gene':
+            fields = line.split("\t")  # speed-up, only run regex on gene lines
+            if fields[2] != "gene":
                 continue
 
             match = re.match(pattern, line)  # run regex
@@ -493,4 +567,5 @@ def ensembl_gene_id_to_official_gene_symbol(ids, gene_id_map):
       objects, it is much faster to only construct the map a single time.
     :return list: converted ids
     """
-    return ['-'.join(gene_id_map[i]) for i in ids]
+    return ["-".join(gene_id_map[i]) for i in ids]
+

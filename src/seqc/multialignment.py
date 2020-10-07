@@ -84,6 +84,7 @@ class UnionFind:
         """
         return self[next(iter(iterable))]
 
+
 def intersection(set_l):
     res = set_l[0]
     for s in set_l:
@@ -109,7 +110,7 @@ def intersection(set_l):
 #         if len(temp)>0:
 #             res[g] = temp
 #     return res
-    
+
 # #def strip(genes):
 # #    return tuple(sorted([int(g[2:]) for g in genes]))
 # def strip(genes):
@@ -125,7 +126,7 @@ def intersection(set_l):
 #     uf = UnionFind()
 #     uf.union_all(obs.keys())
 #     set_membership, sets = uf.find_all(obs.keys())
-    
+
 #     for s in sets:
 #         d = {}
 #         for k in np.array(list(obs.keys()))[set_membership == s]:
@@ -143,26 +144,26 @@ def intersection(set_l):
 #     for g in model:
 #         if model[g]==1:
 #             return g
-            
-    
+
+
 # def get_combinations(l):
 #     res = []
 #     for i in range(len(l)):
 #         res += itertools.combinations(l,i+1)
 #     return res
-            
+
 # # rank the different possible models by their scores
 # def best_fit_model(obs_s, coalignment_mat):
 #     #obs_s = strip_model(obs)
 #     gene_l = single_gene_list(obs_s)  # From the list of observation create a list of unique single genes from which different models can be inferred
-      
-    
+
+
 #     if len(obs_s) == 1:
 #         if len(list(obs_s.keys())[0]) == 1:
 #             return [{gene_l[0]:1}], NO_DISAMBIGUATION
-    
+
 #     possible_genes = intersection(list(obs_s.keys()))
-    
+
 #     #There is one gene that resolve the disambiguation
 #     if len(possible_genes) == 1:
 #         model = {}
@@ -170,24 +171,24 @@ def intersection(set_l):
 #             model[g] = 0
 #         model[list(possible_genes)[0]] = 1
 #         return [model], RESOLVED_GENE
-    
+
 #     #There is more than one gene that can explain it, no model can be decided
 #     if len(possible_genes) > 1:
 #         return [], NO_GENE_RESOLVED
 
 #     #There are multiple competing models. For now we don't decide bewteen them
 #     return [], MULTIPLE_MODELS
-# #    mod_score_list = []     
+# #    mod_score_list = []
 # #    for mod in get_combinations(gene_l):
 # #        model = {}
-# #        for k in gene_l: 
+# #        for k in gene_l:
 # #            if k in mod:
 # #                model[k] = 1
 # #            else:
 # #                model[k] = 0
 # #        score = model_score(model, obs_s, coalignment_mat)
 # #        mod_score_list.append((model,score))
-        
+
 #     #Here to decide if there is one model that's obviously better
 # #    return mod_score_list, MULTIPLE_MODELS
 
@@ -217,16 +218,16 @@ def intersection(set_l):
 #             tot[gene] = model[gene]*(observed[gene,]/coalignment_mat[gene][gene,])
 
 #     keys = get_combinations(model.keys())   #get a list of all possible molecule combinations
-    
+
 #     # key is a set of genes and the expected number of reads for it is the sum of expected reads from all genes shared by the key,
 #     # these in turn are the total reads for a gene (extrapoletaed from the uniqely mapped) multiplied by the coalignment factor (present in the coalignment matrix)
 #     # e.g. if A has 20% coalignment with B and there are 80 reads mapped uniquely to A, we expect 80/0.8 * 0.2 = 20 reads to be mapped to AB from A (and more from B)
-#     for k in keys:  
+#     for k in keys:
 #         k = tuple(sorted(k))
 #         sum = 0
 #         for gene in k:
 #             #Patch for SC000
-#             if gene==0: 
+#             if gene==0:
 #                 if k==(0,):
 #                     sum=1
 #                 else:
@@ -235,7 +236,7 @@ def intersection(set_l):
 #             elif k in coalignment_mat[gene]:
 #                 sum += tot[gene]*coalignment_mat[gene][k]
 #         exp[k] = sum
-    
+
 #     score = calc_score(observed, exp)
 #     return score
 
@@ -259,5 +260,4 @@ def intersection(set_l):
 #         for g in genes:
 #             l.append(g)
 #     return list(set(l))
-
 

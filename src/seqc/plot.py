@@ -11,74 +11,63 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # make matplotlib logger less verbose
 import logging
-logging.getLogger('matplotlib').setLevel(logging.WARNING)
+
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 try:
-    os.environ['DISPLAY']
+    os.environ["DISPLAY"]
 except KeyError:
-    matplotlib.use('Agg')
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
 with warnings.catch_warnings():
-    warnings.simplefilter('ignore')  # catch warnings that system can't find fonts
+    warnings.simplefilter("ignore")  # catch warnings that system can't find fonts
     fm = font_manager.fontManager
-    fm.findfont('Raleway')
-    fm.findfont('Lato')
+    fm.findfont("Raleway")
+    fm.findfont("Lato")
 
 warnings.filterwarnings(action="ignore", module="matplotlib", message="^tight_layout")
 
-dark_gray = '.15'
+dark_gray = ".15"
 
-_colors = ['#4C72B0', '#55A868', '#C44E52',
-           '#8172B2', '#CCB974', '#64B5CD']
+_colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2", "#CCB974", "#64B5CD"]
 
 style_dictionary = {
-    'figure.figsize': (3, 3),
-    'figure.facecolor': 'white',
-
-    'figure.dpi': 200,
-    'savefig.dpi': 200,
-
-    'text.color': 'k',
-
+    "figure.figsize": (3, 3),
+    "figure.facecolor": "white",
+    "figure.dpi": 200,
+    "savefig.dpi": 200,
+    "text.color": "k",
     "legend.frameon": False,
     "legend.numpoints": 1,
     "legend.scatterpoints": 1,
-
-    'font.family': ['sans-serif'],
-    'font.serif': ['Computer Modern Roman', 'serif'],
-    'font.monospace': ['Inconsolata', 'Computer Modern Typewriter', 'Monaco'],
-    'font.sans-serif': ['Helvetica', 'Lato', 'sans-serif'],
-
-    'patch.facecolor': _colors[0],
-    'patch.edgecolor': 'none',
-
-    'grid.linestyle': "-",
-
-    'axes.labelcolor': dark_gray,
-    'axes.facecolor': 'white',
-    'axes.linewidth': 1.,
-    'axes.grid': False,
-    'axes.axisbelow': False,
-    'axes.edgecolor': dark_gray,
-    'axes.prop_cycle': cycler('color', _colors),
-
-    'lines.solid_capstyle': 'round',
-    'lines.color': _colors[0],
-    'lines.markersize': 4,
-
-    'image.cmap': 'viridis',
-    'image.interpolation': 'none',
-
-    'xtick.direction': 'in',
-    'xtick.major.size': 4,
-    'xtick.minor.size': 2,
-    'xtick.color': dark_gray,
-
-    'ytick.direction': 'in',
-    'ytick.major.size': 4,
-    'ytick.minor.size': 2,
+    "font.family": ["sans-serif"],
+    "font.serif": ["Computer Modern Roman", "serif"],
+    "font.monospace": ["Inconsolata", "Computer Modern Typewriter", "Monaco"],
+    "font.sans-serif": ["Helvetica", "Lato", "sans-serif"],
+    "patch.facecolor": _colors[0],
+    "patch.edgecolor": "none",
+    "grid.linestyle": "-",
+    "axes.labelcolor": dark_gray,
+    "axes.facecolor": "white",
+    "axes.linewidth": 1.0,
+    "axes.grid": False,
+    "axes.axisbelow": False,
+    "axes.edgecolor": dark_gray,
+    "axes.prop_cycle": cycler("color", _colors),
+    "lines.solid_capstyle": "round",
+    "lines.color": _colors[0],
+    "lines.markersize": 4,
+    "image.cmap": "viridis",
+    "image.interpolation": "none",
+    "xtick.direction": "in",
+    "xtick.major.size": 4,
+    "xtick.minor.size": 2,
+    "xtick.color": dark_gray,
+    "ytick.direction": "in",
+    "ytick.major.size": 4,
+    "ytick.minor.size": 2,
     "ytick.color": dark_gray,
-
 }
 
 matplotlib.rcParams.update(style_dictionary)
@@ -86,7 +75,7 @@ matplotlib.rcParams.update(style_dictionary)
 
 def refresh_rc():
     matplotlib.rcParams.update(style_dictionary)
-    print('rcParams updated')
+    print("rcParams updated")
 
 
 class FigureGrid:
@@ -153,7 +142,7 @@ class FigureGrid:
         for ax in self:
             detick(ax, x=x, y=y)
 
-    def savefig(self, filename, pad_inches=0.1, bbox_inches='tight', *args, **kwargs):
+    def savefig(self, filename, pad_inches=0.1, bbox_inches="tight", *args, **kwargs):
         """
         wrapper for savefig, including necessary paramters to avoid cut-off
 
@@ -165,7 +154,8 @@ class FigureGrid:
         :return:
         """
         self.figure.savefig(
-            filename, pad_inches=pad_inches, bbox_inches=bbox_inches, *args, **kwargs)
+            filename, pad_inches=pad_inches, bbox_inches=bbox_inches, *args, **kwargs
+        )
 
 
 def detick(ax=None, x=True, y=True):
@@ -185,27 +175,27 @@ def despine(ax=None, top=True, right=True, bottom=False, left=False) -> None:
 
     # set spines
     if top:
-        ax.spines['top'].set_visible(False)
+        ax.spines["top"].set_visible(False)
     if right:
-        ax.spines['right'].set_visible(False)
+        ax.spines["right"].set_visible(False)
     if bottom:
-        ax.spines['bottom'].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
     if left:
-        ax.spines['left'].set_visible(False)
+        ax.spines["left"].set_visible(False)
 
     # set ticks
     if top and bottom:
-        ax.xaxis.set_ticks_position('none')
+        ax.xaxis.set_ticks_position("none")
     elif top:
-        ax.xaxis.set_ticks_position('bottom')
+        ax.xaxis.set_ticks_position("bottom")
     elif bottom:
-        ax.xaxis.set_ticks_position('top')
+        ax.xaxis.set_ticks_position("top")
     if left and right:
-        ax.yaxis.set_ticks_position('none')
+        ax.yaxis.set_ticks_position("none")
     elif left:
-        ax.yaxis.set_ticks_position('right')
+        ax.yaxis.set_ticks_position("right")
     elif right:
-        ax.yaxis.set_ticks_position('left')
+        ax.yaxis.set_ticks_position("left")
 
 
 def xtick_vertical(ax=None):
@@ -215,7 +205,7 @@ def xtick_vertical(ax=None):
     xt = ax.get_xticks()
     if np.all(xt.astype(int) == xt):  # ax.get_xticks() returns floats
         xt = xt.astype(int)
-    ax.set_xticklabels(xt, rotation='vertical')
+    ax.set_xticklabels(xt, rotation="vertical")
 
 
 def equalize_numerical_tick_number(ax=None):
@@ -250,7 +240,7 @@ def map_categorical_to_cmap(data: np.ndarray, cmap=plt.get_cmap()):
     """
     categories = np.unique(data)
     n = len(categories)
-    if isinstance(cmap, str) and 'random' in cmap:
+    if isinstance(cmap, str) and "random" in cmap:
         colors = np.random.rand(n, 3)
     else:
         colors = cmap(np.linspace(0, 1, n))
@@ -259,8 +249,13 @@ def map_categorical_to_cmap(data: np.ndarray, cmap=plt.get_cmap()):
 
 
 def add_legend_to_categorical_vector(
-        colors: np.ndarray, labels, ax, loc='best',  # bbox_to_anchor=(0.98, 0.5),
-        markerscale=0.75, **kwargs):
+    colors: np.ndarray,
+    labels,
+    ax,
+    loc="best",  # bbox_to_anchor=(0.98, 0.5),
+    markerscale=0.75,
+    **kwargs
+):
     """
     Add a legend to a plot where the color scale was set by discretizing a colormap.
 
@@ -272,18 +267,31 @@ def add_legend_to_categorical_vector(
     """
     artists = []
     for c in colors:
-        artists.append(plt.Line2D((0, 1), (0, 0), color=c, marker='o', linestyle=''))
+        artists.append(plt.Line2D((0, 1), (0, 0), color=c, marker="o", linestyle=""))
     ax.legend(
-        artists, labels, loc=loc, markerscale=markerscale,  # bbox_to_anchor=bbox_to_anchor,
-        **kwargs)
+        artists,
+        labels,
+        loc=loc,
+        markerscale=markerscale,  # bbox_to_anchor=bbox_to_anchor,
+        **kwargs
+    )
 
 
 class scatter:
-
     @staticmethod
     def categorical(
-            x, y, c, ax=None, cmap=plt.get_cmap(), legend=True, legend_kwargs=None,
-            randomize=True, remove_ticks=False, *args, **kwargs):
+        x,
+        y,
+        c,
+        ax=None,
+        cmap=plt.get_cmap(),
+        legend=True,
+        legend_kwargs=None,
+        randomize=True,
+        remove_ticks=False,
+        *args,
+        **kwargs
+    ):
         """
         wrapper for scatter wherein the output should be colored by a categorical vector
         c
@@ -313,21 +321,31 @@ class scatter:
         else:
             ind = np.argsort(np.ravel(c))
 
-        ax.scatter(np.ravel(x)[ind], np.ravel(y)[ind], c=color_vector[ind], *args,
-                   **kwargs)
+        ax.scatter(
+            np.ravel(x)[ind], np.ravel(y)[ind], c=color_vector[ind], *args, **kwargs
+        )
         if remove_ticks:
             ax.xaxis.set_major_locator(plt.NullLocator())
             ax.yaxis.set_major_locator(plt.NullLocator())
 
         labels, colors = zip(*sorted(category_to_color.items()))
         if legend:
-            add_legend_to_categorical_vector(colors, labels, ax, markerscale=2,
-                                             **legend_kwargs)
+            add_legend_to_categorical_vector(
+                colors, labels, ax, markerscale=2, **legend_kwargs
+            )
         return ax
 
     @staticmethod
-    def continuous(x, y, c=None, ax=None, colorbar=True, randomize=True,
-                   remove_ticks=False, **kwargs):
+    def continuous(
+        x,
+        y,
+        c=None,
+        ax=None,
+        colorbar=True,
+        randomize=True,
+        remove_ticks=False,
+        **kwargs
+    ):
         """
         wrapper for scatter wherein the coordinates x and y are colored according to a
         continuous vector c
@@ -379,16 +397,15 @@ def tatarize(n):
     :return:
     """
 
-    with open(os.path.expanduser('~/.seqc/tools/tatarize_269.txt')) as f:
+    with open(os.path.expanduser("~/.seqc/tools/tatarize_269.txt")) as f:
         s = f.read().split('","')
-    s[0] = s[0].replace('{"', '')
-    s[-1] = s[-1].replace('"}', '')
+    s[0] = s[0].replace('{"', "")
+    s[-1] = s[-1].replace('"}', "")
     s = [hex2color(s) for s in s]
     return s[:n]
 
 
 class Diagnostics:
-
     @staticmethod
     def mitochondrial_fraction(data: pd.DataFrame, ax=None):
         """plot the fraction of mRNA that are of mitochondrial origin for each cell.
@@ -398,7 +415,7 @@ class Diagnostics:
         :return: ax
         """
 
-        mt_genes = data.molecules.columns[data.molecules.columns.str.contains('MT-')]
+        mt_genes = data.molecules.columns[data.molecules.columns.str.contains("MT-")]
         mt_counts = data.molecules[mt_genes].sum(axis=1)
         library_size = data.molecules.sum(axis=1)
 
@@ -406,9 +423,9 @@ class Diagnostics:
             ax = plt.gca()
 
         scatter.continuous(library_size, mt_counts / library_size)
-        ax.set_title('Mitochondrial Fraction')
-        ax.set_xlabel('Total Gene Expression')
-        ax.set_ylabel('Mitochondrial Gene Expression')
+        ax.set_title("Mitochondrial Fraction")
+        ax.set_xlabel("Total Gene Expression")
+        ax.set_ylabel("Mitochondrial Gene Expression")
         _, xmax = ax.get_xlim()
         ax.set_xlim((None, xmax))
         _, ymax = ax.get_ylim()
@@ -418,30 +435,30 @@ class Diagnostics:
 
     @staticmethod
     def pca_components(fig_name, variance_ratio, pca_comps):
-        '''
+        """
         :param fig_name:    name for the figure
         :param variance_ratio:    variance ratios of at least 20 pca components
         :param pca_comps:    pca components of cells
-        '''
+        """
 
         fig = FigureGrid(4, max_cols=2)
         ax_pca, ax_pca12, ax_pca13, ax_pca23 = iter(fig)
-        ax_pca.plot(variance_ratio[0:20]*100.0, c = '#1f77b4')
-        ax_pca.set_xlabel('pca components')
-        ax_pca.set_ylabel('explained variance')
-        ax_pca.set_xlim([0,20.5])
+        ax_pca.plot(variance_ratio[0:20] * 100.0, c="#1f77b4")
+        ax_pca.set_xlabel("pca components")
+        ax_pca.set_ylabel("explained variance")
+        ax_pca.set_xlim([0, 20.5])
 
-        ax_pca12.scatter(pca_comps[:, 0], pca_comps[:, 1], s=3, c = '#1f77b4')
+        ax_pca12.scatter(pca_comps[:, 0], pca_comps[:, 1], s=3, c="#1f77b4")
         ax_pca12.set_xlabel("pca 1")
         ax_pca12.set_ylabel("pca 2")
         xtick_vertical(ax=ax_pca12)
 
-        ax_pca13.scatter(pca_comps[:, 0], pca_comps[:, 2], s=3, c = '#1f77b4')
+        ax_pca13.scatter(pca_comps[:, 0], pca_comps[:, 2], s=3, c="#1f77b4")
         ax_pca13.set_xlabel("pca 1")
         ax_pca13.set_ylabel("pca 3")
         xtick_vertical(ax=ax_pca13)
 
-        ax_pca23.scatter(pca_comps[:, 1], pca_comps[:, 2], s=3, c = '#1f77b4')
+        ax_pca23.scatter(pca_comps[:, 1], pca_comps[:, 2], s=3, c="#1f77b4")
         ax_pca23.set_xlabel("pca 2")
         ax_pca23.set_ylabel("pca 3")
         xtick_vertical(ax=ax_pca23)
@@ -456,31 +473,95 @@ class Diagnostics:
         ax_tsne, ax_phenograph = iter(fig)
 
         cl = np.log10(cell_sizes)
-        splot = ax_tsne.scatter(tsne_comps[:, 0], tsne_comps[:, 1],
-                                c=cl, s=3, cmap=plt.cm.coolwarm, vmin = np.min(cl),
-                                vmax=np.percentile(cl, 98))
+        splot = ax_tsne.scatter(
+            tsne_comps[:, 0],
+            tsne_comps[:, 1],
+            c=cl,
+            s=3,
+            cmap=plt.cm.coolwarm,
+            vmin=np.min(cl),
+            vmax=np.percentile(cl, 98),
+        )
 
         ax_tsne.set_title("UMI Counts (log10)")
         ax_tsne.set_xticks([])
         ax_tsne.set_yticks([])
         divider = make_axes_locatable(ax_tsne)
-        cax = divider.append_axes('right', size='3%', pad=0.04)
-        fig.figure.colorbar(splot, cax=cax, orientation='vertical')
+        cax = divider.append_axes("right", size="3%", pad=0.04)
+        fig.figure.colorbar(splot, cax=cax, orientation="vertical")
 
         # this is a list of contrast colors for clutering
-        cmap=["#010067","#D5FF00","#FF0056","#9E008E","#0E4CA1","#FFE502","#005F39","#00FF00","#95003A",
-              "#FF937E","#A42400","#001544","#91D0CB","#620E00","#6B6882","#0000FF","#007DB5","#6A826C",
-              "#00AE7E","#C28C9F","#BE9970","#008F9C","#5FAD4E","#FF0000","#FF00F6","#FF029D","#683D3B",
-              "#FF74A3","#968AE8","#98FF52","#A75740","#01FFFE","#FFEEE8","#FE8900","#BDC6FF","#01D0FF",
-              "#BB8800","#7544B1","#A5FFD2","#FFA6FE","#774D00","#7A4782","#263400","#004754","#43002C",
-              "#B500FF","#FFB167","#FFDB66","#90FB92","#7E2DD2","#BDD393","#E56FFE","#DEFF74","#00FF78",
-              "#009BFF","#006401","#0076FF","#85A900","#00B917","#788231","#00FFC6","#FF6E41","#E85EBE"]
+        cmap = [
+            "#010067",
+            "#D5FF00",
+            "#FF0056",
+            "#9E008E",
+            "#0E4CA1",
+            "#FFE502",
+            "#005F39",
+            "#00FF00",
+            "#95003A",
+            "#FF937E",
+            "#A42400",
+            "#001544",
+            "#91D0CB",
+            "#620E00",
+            "#6B6882",
+            "#0000FF",
+            "#007DB5",
+            "#6A826C",
+            "#00AE7E",
+            "#C28C9F",
+            "#BE9970",
+            "#008F9C",
+            "#5FAD4E",
+            "#FF0000",
+            "#FF00F6",
+            "#FF029D",
+            "#683D3B",
+            "#FF74A3",
+            "#968AE8",
+            "#98FF52",
+            "#A75740",
+            "#01FFFE",
+            "#FFEEE8",
+            "#FE8900",
+            "#BDC6FF",
+            "#01D0FF",
+            "#BB8800",
+            "#7544B1",
+            "#A5FFD2",
+            "#FFA6FE",
+            "#774D00",
+            "#7A4782",
+            "#263400",
+            "#004754",
+            "#43002C",
+            "#B500FF",
+            "#FFB167",
+            "#FFDB66",
+            "#90FB92",
+            "#7E2DD2",
+            "#BDD393",
+            "#E56FFE",
+            "#DEFF74",
+            "#00FF78",
+            "#009BFF",
+            "#006401",
+            "#0076FF",
+            "#85A900",
+            "#00B917",
+            "#788231",
+            "#00FFC6",
+            "#FF6E41",
+            "#E85EBE",
+        ]
 
         colors = []
         for i in range(len(clust_info)):
             colors.append(cmap[clust_info[i]])
 
-        for ci in range(np.min(clust_info),np.max(clust_info)+1):
+        for ci in range(np.min(clust_info), np.max(clust_info) + 1):
             x1 = []
             y1 = []
             for i in range(len(clust_info)):
@@ -488,11 +569,13 @@ class Diagnostics:
                     x1.append(tsne_comps[i, 0])
                     y1.append(tsne_comps[i, 1])
                     cl = colors[i]
-            ax_phenograph.scatter(x1, y1, c=cl, s=3, label="C"+str(ci+1))
-        ax_phenograph.set_title('Phenograph Clustering')
+            ax_phenograph.scatter(x1, y1, c=cl, s=3, label="C" + str(ci + 1))
+        ax_phenograph.set_title("Phenograph Clustering")
         ax_phenograph.set_xticks([])
         ax_phenograph.set_yticks([])
-        ax_phenograph.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., markerscale=2)
+        ax_phenograph.legend(
+            bbox_to_anchor=(1, 1), loc=2, borderaxespad=0.0, markerscale=2
+        )
 
         fig.tight_layout()
         fig.savefig(fig_name, dpi=300, transparent=True)
@@ -507,14 +590,15 @@ class Diagnostics:
         cell_size = data.sum(axis=1)
 
         plt.hist(np.log10(cell_size), bins=25, log=True)
-        ax.set_xlabel('log10(cell size)')
-        ax.set_ylabel('frequency')
+        ax.set_xlabel("log10(cell size)")
+        ax.set_ylabel("frequency")
         despine(ax)
         xtick_vertical(ax)
 
         if save is not None:
             if not isinstance(save, str):
-                raise TypeError('save must be the string filename of the '
-                                'figure-to-be-saved')
+                raise TypeError(
+                    "save must be the string filename of the " "figure-to-be-saved"
+                )
             plt.tight_layout()
             f.savefig(save, dpi=300)

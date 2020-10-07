@@ -14,7 +14,9 @@ class AbstractPlatform:
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, barcodes_len, filter_lonely_triplets=False, filter_low_count=True):
+    def __init__(
+        self, barcodes_len, filter_lonely_triplets=False, filter_low_count=True
+    ):
         """
         Ctor for the abstract class. barcodes_len is a list of barcodes lengths,
         check_barcodes is a flag signalling whether or not the barcodes are known apriori
@@ -26,6 +28,7 @@ class AbstractPlatform:
         self._filter_lonely_triplets = filter_lonely_triplets
         self._filter_low_count = filter_low_count
 
+    @staticmethod
     def factory(type):
         if type == "in_drop":
             return in_drop()
@@ -128,7 +131,6 @@ class AbstractPlatform:
 
 
 class in_drop(AbstractPlatform):
-
     def __init__(self):
         AbstractPlatform.__init__(self, [-1, 8])
 
@@ -139,30 +141,30 @@ class in_drop(AbstractPlatform):
         :param sequence: fastq sequence data
         :returns: (cell_barcode, rmt, poly_t)
         """
-        assert ~sequence.endswith(b'\n')
+        assert ~sequence.endswith(b"\n")
         identifier = sequence[24:28]
-        if identifier == b'CGCC':
+        if identifier == b"CGCC":
             cb1 = sequence[:8]
             cb2 = sequence[30:38]
             rmt = sequence[38:44]
             poly_t = sequence[44:]
-        elif identifier == b'ACGC':
+        elif identifier == b"ACGC":
             cb1 = sequence[:9]
             cb2 = sequence[31:39]
             rmt = sequence[39:45]
             poly_t = sequence[45:]
-        elif identifier == b'GACG':
+        elif identifier == b"GACG":
             cb1 = sequence[:10]
             cb2 = sequence[32:40]
             rmt = sequence[40:46]
             poly_t = sequence[46:]
-        elif identifier == b'TGAC':
+        elif identifier == b"TGAC":
             cb1 = sequence[:11]
             cb2 = sequence[33:41]
             rmt = sequence[41:47]
             poly_t = sequence[47:]
         else:
-            return b'', b'', b''
+            return b"", b"", b""
         cell = cb1 + cb2
         return cell, rmt, poly_t
 
@@ -182,16 +184,19 @@ class in_drop(AbstractPlatform):
         :param b: barcode fastq sequence data
         :return: annotated genomic sequence.
         """
-        pattern = re.compile(b'(.{8,11}?)(GAGTGATTGCTTGTGACGCCTT){s<=2}(.{8})(.{6})(.*?)')
+        pattern = re.compile(
+            b"(.{8,11}?)(GAGTGATTGCTTGTGACGCCTT){s<=2}(.{8})(.{6})(.*?)"
+        )
         cell, rmt, poly_t = self.check_spacer(b.sequence[:-1])
         if not cell:
             try:
                 cell1, spacer, cell2, rmt, poly_t = re.match(
-                    pattern, b.sequence[:-1]).groups()
+                    pattern, b.sequence[:-1]
+                ).groups()
                 cell = cell1 + cell2
             except AttributeError:
-                cell, rmt, poly_t = b'', b'', b''
-        g.add_annotation((b'', cell, rmt, poly_t))
+                cell, rmt, poly_t = b"", b"", b""
+        g.add_annotation((b"", cell, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -200,11 +205,13 @@ class in_drop(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=1)
-        return error_rate
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=1
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -214,11 +221,10 @@ class in_drop(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        rmt_correction.in_drop(ra, error_rate)
+        return rmt_correction.in_drop(ra, error_rate)
 
 
 class in_drop_v2(AbstractPlatform):
-
     def __init__(self):
         AbstractPlatform.__init__(self, [-1, 8])
 
@@ -229,30 +235,30 @@ class in_drop_v2(AbstractPlatform):
         :param sequence: fastq sequence data
         :returns: (cell_barcode, rmt, poly_t)
         """
-        assert ~sequence.endswith(b'\n')
+        assert ~sequence.endswith(b"\n")
         identifier = sequence[24:28]
-        if identifier == b'CGCC':
+        if identifier == b"CGCC":
             cb1 = sequence[:8]
             cb2 = sequence[30:38]
             rmt = sequence[38:46]
             poly_t = sequence[46:]
-        elif identifier == b'ACGC':
+        elif identifier == b"ACGC":
             cb1 = sequence[:9]
             cb2 = sequence[31:39]
             rmt = sequence[39:47]
             poly_t = sequence[47:]
-        elif identifier == b'GACG':
+        elif identifier == b"GACG":
             cb1 = sequence[:10]
             cb2 = sequence[32:40]
             rmt = sequence[40:48]
             poly_t = sequence[48:]
-        elif identifier == b'TGAC':
+        elif identifier == b"TGAC":
             cb1 = sequence[:11]
             cb2 = sequence[33:41]
             rmt = sequence[41:49]
             poly_t = sequence[49:]
         else:
-            return b'', b'', b''
+            return b"", b"", b""
         cell = cb1 + cb2
         return cell, rmt, poly_t
 
@@ -272,16 +278,19 @@ class in_drop_v2(AbstractPlatform):
         :param b: barcode fastq sequence data
         :return: annotated genomic sequence.
         """
-        pattern = re.compile(b'(.{8,11}?)(GAGTGATTGCTTGTGACGCCAA){s<=2}(.{8})(.{8})(.*?)')
+        pattern = re.compile(
+            b"(.{8,11}?)(GAGTGATTGCTTGTGACGCCAA){s<=2}(.{8})(.{8})(.*?)"
+        )
         cell, rmt, poly_t = self.check_spacer(b.sequence[:-1])
         if not cell:
             try:
                 cell1, spacer, cell2, rmt, poly_t = re.match(
-                    pattern, b.sequence[:-1]).groups()
+                    pattern, b.sequence[:-1]
+                ).groups()
                 cell = cell1 + cell2
             except AttributeError:
-                cell, rmt, poly_t = b'', b'', b''
-        g.add_annotation((b'', cell, rmt, poly_t))
+                cell, rmt, poly_t = b"", b"", b""
+        g.add_annotation((b"", cell, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -290,11 +299,13 @@ class in_drop_v2(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=2)
-        return error_rate
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=2
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -304,11 +315,10 @@ class in_drop_v2(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        rmt_correction.in_drop(ra, error_rate)
+        return rmt_correction.in_drop(ra, error_rate)
 
 
 class in_drop_v3(AbstractPlatform):
-
     def __init__(self):
         AbstractPlatform.__init__(self, [-1, 8])
 
@@ -337,7 +347,7 @@ class in_drop_v3(AbstractPlatform):
         poly_t = seq[16:]
         # bc is in a fixed position in the name; assumes 8bp indices.
         cell1 = g.name.strip()[-17:-9]
-        g.add_annotation((b'', cell1 + cell2, rmt, poly_t))
+        g.add_annotation((b"", cell1 + cell2, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -348,7 +358,6 @@ class in_drop_v3(AbstractPlatform):
 
 
 class in_drop_v4(AbstractPlatform):
-
     def __init__(self):
         AbstractPlatform.__init__(self, [-1, 8])
 
@@ -376,7 +385,7 @@ class in_drop_v4(AbstractPlatform):
         cell2 = seq[12:20]
         rmt = seq[20:28]
         poly_t = seq[28:]
-        g.add_annotation((b'', cell1 + cell2, rmt, poly_t))
+        g.add_annotation((b"", cell1 + cell2, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -385,10 +394,12 @@ class in_drop_v4(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
         """
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=2)
-        return error_rate
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=2
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -397,16 +408,17 @@ class in_drop_v4(AbstractPlatform):
         :param ra: Read array
         :param error_rate: Error rate table from apply_barcode_correction
         """
-        rmt_correction.in_drop(ra, error_rate)
+        return rmt_correction.in_drop(ra, error_rate)
 
 
 class in_drop_v5(AbstractPlatform):
-
     def __init__(self, potential_barcodes=None):
         AbstractPlatform.__init__(self, [-1, 8])
         self.potential_barcodes = potential_barcodes
         if self.potential_barcodes is not None:
-            self.potential_encoded_bcs = set(DNA3Bit.encode(pb) for pb in self.potential_barcodes)
+            self.potential_encoded_bcs = set(
+                DNA3Bit.encode(pb) for pb in self.potential_barcodes
+            )
 
     @classmethod
     def check_spacer(cls, sequence):
@@ -415,22 +427,22 @@ class in_drop_v5(AbstractPlatform):
         :param sequence: fastq sequence data
         :returns: (cb1, rest), where rest includes cb2, rmt, poly_t
         """
-        assert ~sequence.endswith(b'\n')
+        assert ~sequence.endswith(b"\n")
         identifier = sequence[24:28]
-        if identifier == b'CGCC':
+        if identifier == b"CGCC":
             cb1 = sequence[:8]
             rest = sequence[30:]
-        elif identifier == b'ACGC':
+        elif identifier == b"ACGC":
             cb1 = sequence[:9]
             rest = sequence[31:]
-        elif identifier == b'GACG':
+        elif identifier == b"GACG":
             cb1 = sequence[:10]
             rest = sequence[32:]
-        elif identifier == b'TGAC':
+        elif identifier == b"TGAC":
             cb1 = sequence[:11]
             rest = sequence[33:]
         else:
-            return b'', b''
+            return b"", b""
 
         return cb1, rest
 
@@ -451,7 +463,7 @@ class in_drop_v5(AbstractPlatform):
             rmt = rest[9:17]
             poly_t = rest[17:]
         else:
-            return b'', b'', b''
+            return b"", b"", b""
 
         return cb2, rmt, poly_t
 
@@ -469,7 +481,7 @@ class in_drop_v5(AbstractPlatform):
         # Build set of all potential correct and incorrect cb2
         potential_barcodes = set()
         cb2_file = barcode_files[1]
-        with open(cb2_file, 'r') as f:
+        with open(cb2_file, "r") as f:
             valid_barcodes = set([line.strip() for line in f.readlines()])
         # This will work for any number of allowable mismatches
         for bc in valid_barcodes:
@@ -478,9 +490,11 @@ class in_drop_v5(AbstractPlatform):
                 invalid_bc = [[nt] for nt in bc]
                 for ind in inds:
                     valid_nt = bc[ind]
-                    invalid_bc[ind] = [nt for nt in ['A', 'C', 'G', 'T', 'N'] if nt != valid_nt]
+                    invalid_bc[ind] = [
+                        nt for nt in ["A", "C", "G", "T", "N"] if nt != valid_nt
+                    ]
                 for mut in itertools.product(*invalid_bc):
-                    potential_barcodes.add(''.join(mut))
+                    potential_barcodes.add("".join(mut))
         potential_barcodes = set([pb.encode() for pb in potential_barcodes])
 
         return cls(potential_barcodes=potential_barcodes)
@@ -503,15 +517,15 @@ class in_drop_v5(AbstractPlatform):
         """
         cb1, rest = self.check_spacer(b.sequence[:-1])
         if not cb1:
-            cell, rmt, poly_t = b'', b'', b''
+            cell, rmt, poly_t = b"", b"", b""
         else:
             cb2, rmt, poly_t = self.check_cb2(rest)
             if not cb2:
-                cell = b''
+                cell = b""
             else:
                 cell = cb1 + cb2
 
-        g.add_annotation((b'', cell, rmt, poly_t))
+        g.add_annotation((b"", cell, rmt, poly_t))
         return g
 
     def extract_barcodes(self, seq):
@@ -541,11 +555,13 @@ class in_drop_v5(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=1)
-        return error_rate
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=1
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -555,11 +571,10 @@ class in_drop_v5(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        rmt_correction.in_drop(ra, error_rate)
+        return rmt_correction.in_drop(ra, error_rate)
 
 
 class drop_seq(AbstractPlatform):
-
     def __init__(self):
         AbstractPlatform.__init__(self, [12])
 
@@ -582,7 +597,7 @@ class drop_seq(AbstractPlatform):
         cell = b.sequence[:12]
         rmt = b.sequence[12:20]
         poly_t = b.sequence[20:-1]
-        g.add_annotation((b'', cell, rmt, poly_t))
+        g.add_annotation((b"", cell, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -591,11 +606,11 @@ class drop_seq(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         barcode_correction.drop_seq(ra)
-        return None
+        return None, None
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -605,11 +620,10 @@ class drop_seq(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        log.info('Drop-seq barcodes do not support RMT correction')
+        log.info("Drop-seq barcodes do not support RMT correction")
 
 
 class mars1_seq(AbstractPlatform):
-
     def __init__(self):
         AbstractPlatform.__init__(self, [4, 8], True, False)
 
@@ -632,9 +646,14 @@ class mars1_seq(AbstractPlatform):
         :return: annotated genomic sequence.
         """
 
-        *name_fields, pool, cell, rmt = g.name[1:-1].split(b':')
-        g.name = (b'@' + b':'.join((pool, cell, rmt, b'')) + b';' +
-                  b':'.join(name_fields) + b'\n')
+        *name_fields, pool, cell, rmt = g.name[1:-1].split(b":")
+        g.name = (
+            b"@"
+            + b":".join((pool, cell, rmt, b""))
+            + b";"
+            + b":".join(name_fields)
+            + b"\n"
+        )
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -643,12 +662,14 @@ class mars1_seq(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=0)
-        return error_rate
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -658,11 +679,10 @@ class mars1_seq(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        log.info('Mars-seq barcodes do not support RMT correction')
+        log.info("Mars-seq barcodes do not support RMT correction")
 
 
 class mars2_seq(AbstractPlatform):
-
     def __init__(self):
         AbstractPlatform.__init__(self, [4, 8], True, False)
 
@@ -687,7 +707,7 @@ class mars2_seq(AbstractPlatform):
         cell = seq[:7]
         rmt = seq[7:15]
         poly_t = seq[15:]
-        g.add_annotation((b'', pool + cell, rmt, poly_t))
+        g.add_annotation((b"", pool + cell, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -696,12 +716,14 @@ class mars2_seq(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=0)
-        return error_rate
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -711,11 +733,10 @@ class mars2_seq(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        log.info('Mars-seq barcodes do not support RMT correction')
+        log.info("Mars-seq barcodes do not support RMT correction")
 
 
 class mars_germany(AbstractPlatform):
-
     def __init__(self):
         AbstractPlatform.__init__(self, [10], True, False)
 
@@ -725,13 +746,13 @@ class mars_germany(AbstractPlatform):
     def merge_function(self, g, b):
         pool = g.sequence.strip()[3:7]  # 4 bp
         # strip() is necessary in case there is a truncated read. \n=good, \n\n=bad
-        g.sequence = g.sequence.strip()[7:] + b'\n'
+        g.sequence = g.sequence.strip()[7:] + b"\n"
         # Need to skip over the quality as well
-        g.quality = g.quality.strip()[7:] + b'\n'
+        g.quality = g.quality.strip()[7:] + b"\n"
         seq = b.sequence.strip()
         cell = seq[:6]  # 6 bp
         rmt = seq[6:12]  # 6 bp
-        g.add_annotation((b'', pool + cell, rmt, b''))
+        g.add_annotation((b"", pool + cell, rmt, b""))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -740,12 +761,14 @@ class mars_germany(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
-        error_rate = barcode_correction.in_drop(ra, self, barcode_files, max_ed=0)
-        return error_rate
+        error_rate, df_correction = barcode_correction.in_drop(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -755,7 +778,7 @@ class mars_germany(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        log.info('Mars-seq barcodes do not support RMT correction')
+        log.info("Mars-seq barcodes do not support RMT correction")
 
 
 class ten_x(AbstractPlatform):
@@ -788,15 +811,17 @@ class ten_x(AbstractPlatform):
         # bc is in a fixed position in the name; assumes 10bp indices.
         cell = g.name.strip()[-23:-9]
         poly_t = combined[10:]
-        g.add_annotation((b'', cell, rmt, poly_t))
+        g.add_annotation((b"", cell, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
-        error_rate = barcode_correction.ten_x_barcode_correction(ra, self, barcode_files, max_ed=0)
-        return error_rate
+        error_rate, df_correction = barcode_correction.ten_x_barcode_correction(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
-        rmt_correction.in_drop(ra, error_rate=0.02)
+        return rmt_correction.in_drop(ra, error_rate=0.02)
 
 
 class ten_x_v2(AbstractPlatform):
@@ -826,7 +851,7 @@ class ten_x_v2(AbstractPlatform):
         cell = combined[0:16]  # v2 chemistry has 16bp barcodes
         rmt = combined[16:26]  # 10 baselength RMT
         poly_t = combined[26:]
-        g.add_annotation((b'', cell, rmt, poly_t))
+        g.add_annotation((b"", cell, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -835,12 +860,14 @@ class ten_x_v2(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
-        error_rate = barcode_correction.ten_x_barcode_correction(ra, self, barcode_files, max_ed=0)
-        return error_rate
+        error_rate, df_correction = barcode_correction.ten_x_barcode_correction(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -850,7 +877,7 @@ class ten_x_v2(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        rmt_correction.in_drop(ra, error_rate=0.02)
+        return rmt_correction.in_drop(ra, error_rate=0.02)
 
 
 class ten_x_v3(AbstractPlatform):
@@ -881,10 +908,10 @@ class ten_x_v3(AbstractPlatform):
         :return: annotated genomic sequence.
         """
         combined = b.sequence.strip()
-        cell = combined[0:self.cb_len]
-        rmt = combined[self.cb_len:self.cb_len + self.mb_len]
-        poly_t = combined[self.cb_len + self.mb_len:]
-        g.add_annotation((b'', cell, rmt, poly_t))
+        cell = combined[0 : self.cb_len]
+        rmt = combined[self.cb_len : self.cb_len + self.mb_len]
+        poly_t = combined[self.cb_len + self.mb_len :]
+        g.add_annotation((b"", cell, rmt, poly_t))
         return g
 
     def apply_barcode_correction(self, ra, barcode_files):
@@ -893,12 +920,14 @@ class ten_x_v3(AbstractPlatform):
 
         :param ra: Read array
         :param barcode_files: Valid barcodes files
-        :returns: Error rate table
+        :returns: Error rate table and pre-/post-corrected barcodes
 
         """
         # todo: verify max edit distance
-        error_rate = barcode_correction.ten_x_barcode_correction(ra, self, barcode_files, max_ed=0)
-        return error_rate
+        error_rate, df_correction = barcode_correction.ten_x_barcode_correction(
+            ra, self, barcode_files, max_ed=0
+        )
+        return error_rate, df_correction
 
     def apply_rmt_correction(self, ra, error_rate):
         """
@@ -908,4 +937,4 @@ class ten_x_v3(AbstractPlatform):
         :param error_rate: Error rate table from apply_barcode_correction
 
         """
-        rmt_correction.in_drop(ra, error_rate=0.02)
+        return rmt_correction.in_drop(ra, error_rate=0.02)

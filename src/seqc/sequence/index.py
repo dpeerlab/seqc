@@ -6,11 +6,11 @@ import numpy as np
 from seqc.sequence import gtf
 from seqc.alignment import star
 from seqc.io import S3
+from seqc import log
 
 
 class Index:
-
-    def __init__(self, organism, additional_id_types=None, index_folder_name='.'):
+    def __init__(self, organism, additional_id_types=None, index_folder_name="."):
         """Create an Index object for organism, requiring that a valid annotation have
         both an ENSEMBL id and at least one additional id provided by an
         additional_id_field (if provided)
@@ -42,20 +42,25 @@ class Index:
         # check organism input
         if not organism:
             raise ValueError(
-                'organism must be formatted as genus_species in all lower case')
+                "organism must be formatted as genus_species in all lower case"
+            )
         elif not isinstance(organism, str):
-            raise TypeError('organism must be a string')
-        elif any([('_' not in organism) or (organism.lower() != organism)]):
+            raise TypeError("organism must be a string")
+        elif any([("_" not in organism) or (organism.lower() != organism)]):
             raise ValueError(
-                'organism must be formatted as genus_species in all lower case')
+                "organism must be formatted as genus_species in all lower case"
+            )
         self._organism = organism
 
         # check additional_id_fields argument
-        if not (isinstance(additional_id_types, (list, tuple, np.ndarray)) or
-                additional_id_types is None):
+        if not (
+            isinstance(additional_id_types, (list, tuple, np.ndarray))
+            or additional_id_types is None
+        ):
             raise TypeError(
-                'if provided, additional id fields must be a list, tuple, or numpy '
-                'array')
+                "if provided, additional id fields must be a list, tuple, or numpy "
+                "array"
+            )
         if additional_id_types:
             self._additional_id_types = additional_id_types
         else:
@@ -63,6 +68,11 @@ class Index:
 
         # todo type checks
         self.index_folder_name = index_folder_name
+
+        if self.index_folder_name != ".":
+            os.makedirs(
+                os.path.join(self.index_folder_name, self.organism), exist_ok=True
+            )
 
     @property
     def organism(self) -> str:
@@ -77,20 +87,22 @@ class Index:
         """Generate The xml query to download an ENSEMBL BioMART file mapping
         ENSEMBL gene ids to any identifiers implemented in self.additional_id_fields
         """
-        attributes = ''.join(
-            '<Attribute name = "%s" />' % f for f in self.additional_id_types)
-        genus, species = self.organism.split('_')
+        attributes = "".join(
+            '<Attribute name = "%s" />' % f for f in self.additional_id_types
+        )
+        genus, species = self.organism.split("_")
         genome_name = genus[0] + species
         xml = (
             '<?xml version = "1.0" encoding = "UTF-8"?>'
-            '<!DOCTYPE Query>'
+            "<!DOCTYPE Query>"
             '<Query virtualSchemaName = "default" formatter = "CSV" header = "0" '
             'uniqueRows = "0" count = "" datasetConfigVersion = "0.6">'
             '<Dataset name = "{genome}_gene_ensembl" interface = "default">'
             '<Attribute name = "ensembl_gene_id" />'
-            '{attr}'
-            '</Dataset>'
-            '</Query>\''.format(genome=genome_name, attr=attributes))
+            "{attr}"
+            "</Dataset>"
+            "</Query>'".format(genome=genome_name, attr=attributes)
+        )
         return xml
 
     @staticmethod
@@ -102,19 +114,22 @@ class Index:
         :param files: list of fasta files obtained from the ENSEMBL ftp server
         :return str: name of the correct genome file"""
         for f in files:
-            if '.dna_sm.primary_assembly' in f:
+            if ".dna_sm.primary_assembly" in f:
                 return f
         for f in files:
-            if f.endswith('.dna_sm.toplevel.fa.gz'):
+            if f.endswith(".dna_sm.toplevel.fa.gz"):
                 return f
-        raise FileNotFoundError('could not find the correct fasta file in %r' % files)
+        raise FileNotFoundError("could not find the correct fasta file in %r" % files)
 
     @staticmethod
-    def _identify_gtf_file(files: [str], newest: int) -> str:
+    def _identify_gtf_file(files: [str], release_num: int) -> str:
         """Identify and return the basic gtf file from a list of annotation files"""
+        search_pattern = ".%d.chr.gtf.gz" % release_num
         for f in files:
-            if f.endswith('.%d.gtf.gz' % newest):
+            if f.endswith(search_pattern):
                 return f
+
+        raise FileNotFoundError("Unable to find *.{}".format(search_pattern))
 
     @staticmethod
     def _identify_newest_release(open_ftp: FTP) -> int:
@@ -125,34 +140,56 @@ class Index:
 
         :param FTP open_ftp: open FTP link to ftp.ensembl.org
         """
-        open_ftp.cwd('/pub')
-        releases = [f for f in open_ftp.nlst() if 'release' in f]
-        newest = max(int(r[r.find('-') + 1:]) for r in releases)
+        open_ftp.cwd("/pub")
+        releases = [f for f in open_ftp.nlst() if f.startswith("release-")]
+        newest = max(int(r[r.find("-") + 1 :]) for r in releases)
+
         return newest - 1
 
-    def _download_fasta_file(self, ftp: FTP, download_name: str) -> None:
+    def _download_fasta_file(
+        self, ftp: FTP, download_name: str, ensemble_release: int
+    ) -> None:
         """download the fasta file for cls.organism from ftp, an open Ensembl FTP server
 
         :param FTP ftp: open FTP link to ENSEMBL
         :param str download_name: filename for downloaded fasta file
         """
-        newest = self._identify_newest_release(ftp)
-        ftp.cwd('/pub/release-%d/fasta/%s/dna' % (newest, self.organism))
-        ensembl_fasta_filename = self._identify_genome_file(ftp.nlst())
-        with open(download_name, 'wb') as f:
-            ftp.retrbinary('RETR %s' % ensembl_fasta_filename, f.write)
 
-    def _download_gtf_file(self, ftp, download_name) -> None:
+        release_num = (
+            ensemble_release if ensemble_release else self._identify_newest_release(ftp)
+        )
+        work_dir = "/pub/release-%d/fasta/%s/dna" % (release_num, self.organism)
+        ftp.cwd(work_dir)
+        ensembl_fasta_filename = self._identify_genome_file(ftp.nlst())
+
+        log.info("FASTA Ensemble Release {}".format(release_num))
+        log.info("ftp://{}{}/{}".format(ftp.host, work_dir, ensembl_fasta_filename))
+
+        with open(download_name, "wb") as f:
+            ftp.retrbinary("RETR %s" % ensembl_fasta_filename, f.write)
+
+    def _download_gtf_file(
+        self, ftp, download_name: str, ensemble_release: int
+    ) -> None:
         """download the gtf file for cls.organism from ftp, an open Ensembl FTP server
 
         :param FTP ftp: open FTP link to ENSEMBL
         :param str download_name: filename for downloaded gtf file
         """
-        newest = self._identify_newest_release(ftp)
-        ftp.cwd('/pub/release-%d/gtf/%s/' % (newest, self.organism))
-        ensembl_gtf_filename = self._identify_gtf_file(ftp.nlst(), newest)
-        with open(download_name, 'wb') as f:
-            ftp.retrbinary('RETR %s' % ensembl_gtf_filename, f.write)
+        release_num = (
+            ensemble_release if ensemble_release else self._identify_newest_release(ftp)
+        )
+        work_dir = "/pub/release-%d/gtf/%s/" % (release_num, self.organism)
+        ftp.cwd(work_dir)
+        ensembl_gtf_filename = self._identify_gtf_file(ftp.nlst(), release_num)
+
+        log.info("GTF Ensemble Release {}".format(release_num))
+        log.info(
+            "ftp://{}{}".format(ftp.host, os.path.join(work_dir, ensembl_gtf_filename))
+        )
+
+        with open(download_name, "wb") as f:
+            ftp.retrbinary("RETR %s" % ensembl_gtf_filename, f.write)
 
     # todo remove wget dependency
     def _download_conversion_file(self, download_name: str) -> None:
@@ -161,44 +198,54 @@ class Index:
 
         :param download_name: name for the downloaded file
         """
-        cmd = ('wget -O %s \'http://www.ensembl.org/biomart/martservice?query=%s > '
-               '/dev/null 2>&1' % (download_name, self._converter_xml))
+        cmd = (
+            "wget -O %s 'http://www.ensembl.org/biomart/martservice?query=%s > "
+            "/dev/null 2>&1" % (download_name, self._converter_xml)
+        )
 
         err = check_call(cmd, shell=True)
         if err:
-            raise ChildProcessError('conversion file download failed: %s' % err)
+            raise ChildProcessError("conversion file download failed: %s" % err)
 
     def _download_ensembl_files(
-            self, fasta_name: str=None, gtf_name: str=None,
-            conversion_name: str=None) -> None:
+        self,
+        ensemble_release: int,
+        fasta_name: str = None,
+        gtf_name: str = None,
+        conversion_name: str = None,
+    ) -> None:
         """download the fasta, gtf, and id_mapping file for the organism defined in
         cls.organism
 
+        :param ensemble_release: Ensemble release number
         :param fasta_name: name for the downloaded fasta file
         :param gtf_name: name for the downloaded gtf file
         :param conversion_name: name for the downloaded conversion file
         """
 
         if fasta_name is None:
-            fasta_name = '%s/%s.fa.gz' % (self.index_folder_name, self.organism)
+            fasta_name = "%s/%s.fa.gz" % (self.index_folder_name, self.organism)
         if gtf_name is None:
-            gtf_name = '%s/%s.gtf.gz' % (self.index_folder_name, self.organism)
+            gtf_name = "%s/%s.gtf.gz" % (self.index_folder_name, self.organism)
         if conversion_name is None:
-            conversion_name = '%s/%s_ids.csv' % (self.index_folder_name, self.organism)
+            conversion_name = "%s/%s_ids.csv" % (self.index_folder_name, self.organism)
 
-        with FTP(host='ftp.ensembl.org') as ftp:
+        ensemble_ftp_address = "ftp.ensembl.org"
+
+        with FTP(host=ensemble_ftp_address) as ftp:
             ftp.login()
-            self._download_fasta_file(ftp, fasta_name)
-            self._download_gtf_file(ftp, gtf_name)
+            self._download_fasta_file(ftp, fasta_name, ensemble_release)
+            self._download_gtf_file(ftp, gtf_name, ensemble_release)
 
         self._download_conversion_file(conversion_name)
 
     def _subset_genes(
-            self,
-            conversion_file: str=None,
-            gtf_file: str=None,
-            truncated_annotation: str=None,
-            valid_biotypes=(b'protein_coding', b'lincRNA')):
+        self,
+        conversion_file: str = None,
+        gtf_file: str = None,
+        truncated_annotation: str = None,
+        valid_biotypes=("protein_coding", "lincRNA"),
+    ):
         """
         Remove any annotation from the annotation_file that is not also defined by at
         least one additional identifer present in conversion file.
@@ -219,47 +266,66 @@ class Index:
         :param conversion_file: file location of the conversion file
         :param gtf_file: file location of the annotation file
         :param truncated_annotation: name for the generated output file
-        :param list(bytes) valid_biotypes: only accept genes of this biotype.
+        :param list(str) valid_biotypes: only accept genes of this biotype.
         """
+
+        if gtf_file is None:
+            gtf_file = os.path.join(
+                self.index_folder_name, "{}.gtf.gz".format(self.organism)
+            )
+        if conversion_file is None:
+            conversion_file = os.path.join(
+                self.index_folder_name, "{}_ids.csv".format(self.organism)
+            )
+        if truncated_annotation is None:
+            truncated_annotation = os.path.join(
+                self.index_folder_name, self.organism, "annotations.gtf"
+            )
+
         if not (self.additional_id_types or valid_biotypes):  # nothing to be done
+            # no need to truncate the annotation file
+            # let's just make a copy of the original file so that it can be added to the final output directory
+            cmd = "gunzip -c {} > {}".format(gtf_file, truncated_annotation)
+            err = check_call(cmd, shell=True)
+            if err:
+                raise ChildProcessError("conversion file download failed: %s" % err)
             return
 
         # change to set for efficiency
-        if all(isinstance(t, str) for t in valid_biotypes):
-            valid_biotypes = set((t.encode() for t in valid_biotypes))
-        elif all(isinstance(t, bytes) for t in valid_biotypes):
-            valid_biotypes = set(valid_biotypes)
-        else:
-            raise TypeError('mixed-type biotypes detected. Please pass valid_biotypes '
-                            'as strings or bytes objects (but not both).')
-
-        if gtf_file is None:
-            gtf_file = '%s/%s.gtf.gz' % (self.index_folder_name, self.organism)
-        if conversion_file is None:
-            conversion_file = '%s/%s_ids.csv' % (self.index_folder_name, self.organism)
-        if truncated_annotation is None:
-            truncated_annotation = '%s/%s_multiconsortia.gtf' % (
-                self.index_folder_name, self.organism)
+        valid_biotypes = set(valid_biotypes)
 
         # extract valid ensembl ids from the conversion file
         c = pd.read_csv(conversion_file, index_col=[0])
-        valid_ensembl_ids = set(c[np.any(~c.isnull().values, axis=1)].index)
+
+        if c.shape[1] == 1:
+            # index == ensembl_gene_id & col 1 == hgnc_symbol
+            valid_ensembl_ids = set(c[np.any(~c.isnull().values, axis=1)].index)
+        elif c.shape[1] == 0:
+            # index == ensembl_gene_id & no columns
+            # set to none to take all IDs
+            valid_ensembl_ids = None
+        else:
+            raise Exception("Not implemented/supported shape={}".format(c.shape))
 
         # remove any invalid ids from the annotation file
         gr = gtf.Reader(gtf_file)
-        with open(truncated_annotation, 'wb') as f:
+        with open(truncated_annotation, "wt") as f:
             for line_fields in gr:
                 record = gtf.Record(line_fields)
-                if (record.attribute(b'gene_id').decode() in valid_ensembl_ids and
-                        record.attribute(b'gene_biotype') in valid_biotypes):
-                    f.write(bytes(record))
+                # include only biotypes of interest
+                if record.attribute("gene_biotype") in valid_biotypes:
+                    if (valid_ensembl_ids is None) or (
+                        record.attribute("gene_id") in valid_ensembl_ids
+                    ):
+                        f.write("\t".join(line_fields))
 
     def _create_star_index(
-            self,
-            fasta_file: str=None,
-            gtf_file: str=None,
-            genome_dir: str=None,
-            read_length: int=75) -> None:
+        self,
+        fasta_file: str = None,
+        gtf_file: str = None,
+        genome_dir: str = None,
+        read_length: int = 75,
+    ) -> None:
         """Create a new STAR index for the associated genome
 
         :param fasta_file:
@@ -269,16 +335,23 @@ class Index:
         :return:
         """
         if fasta_file is None:
-            fasta_file = '%s/%s.fa.gz' % (self.index_folder_name, self.organism)
+            fasta_file = os.path.join(
+                self.index_folder_name, "{}.fa.gz".format(self.organism)
+            )
         if gtf_file is None:
-            if os.path.isfile('%s/%s_multiconsortia.gtf' % (
-                    self.index_folder_name, self.organism)):
-                gtf_file = '%s/%s_multiconsortia.gtf' % (
-                    self.index_folder_name, self.organism)
+            if os.path.isfile(
+                os.path.join(self.index_folder_name, self.organism, "annotations.gtf")
+            ):
+                gtf_file = os.path.join(
+                    self.index_folder_name, self.organism, "annotations.gtf"
+                )
             else:
-                gtf_file = '%s/%s.gtf.gz' % (self.index_folder_name, self.organism)
+                gtf_file = os.path.join(
+                    self.index_folder_name, "{}.gtf.gz".format(self.organism)
+                )
         if genome_dir is None:
-            genome_dir = '%s/%s' % (self.index_folder_name, self.organism)
+            genome_dir = os.path.join(self.index_folder_name, self.organism)
+
         star.create_index(fasta_file, gtf_file, genome_dir, read_length)
 
     @staticmethod
@@ -288,16 +361,23 @@ class Index:
         :param index_directory: folder containing index
         :param s3_upload_location: location to upload index on s3
         """
-        if not index_directory.endswith('/'):
-            index_directory += '/'
-        if not s3_upload_location.endswith('/'):
-            s3_upload_location += '/'
-        bucket, *dirs = s3_upload_location.replace('s3://', '').split('/')
-        key_prefix = '/'.join(dirs)
-        S3.upload_files(file_prefix=index_directory, bucket=bucket, key_prefix=key_prefix)
+        if not index_directory.endswith("/"):
+            index_directory += "/"
+        if not s3_upload_location.endswith("/"):
+            s3_upload_location += "/"
+        bucket, *dirs = s3_upload_location.replace("s3://", "").split("/")
+        key_prefix = "/".join(dirs)
+        S3.upload_files(
+            file_prefix=index_directory, bucket=bucket, key_prefix=key_prefix
+        )
 
     def create_index(
-            self, valid_biotypes=('protein_coding', 'lincRNA'), s3_location: str=None):
+        self,
+        ensemble_release: int,
+        read_length: int,
+        valid_biotypes=("protein_coding", "lincRNA"),
+        s3_location: str = None,
+    ):
         """create an optionally upload an index
 
         :param valid_biotypes: gene biotypes that do not match values in this list will
@@ -305,11 +385,19 @@ class Index:
         :param s3_location: optional, s3 location to upload the index to.
         :return:
         """
-        if self.index_folder_name is not '.':
-            os.makedirs(self.index_folder_name, exist_ok=True)
-        self._download_ensembl_files()
+
+        log.info("Downloading Ensemble files...")
+        self._download_ensembl_files(ensemble_release)
+
+        log.info("Subsetting genes...")
         self._subset_genes(valid_biotypes=valid_biotypes)
-        self._create_star_index()
+
+        log.info("Creating STAR index...")
+        self._create_star_index(read_length=read_length)
+
         if s3_location:
-            self._upload_index('%s/%s' % (self.index_folder_name, self.organism),
-                               s3_location)
+            log.info("Uploading...")
+            self._upload_index(
+                "%s/%s" % (self.index_folder_name, self.organism), s3_location
+            )
+

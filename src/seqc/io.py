@@ -125,7 +125,7 @@ class S3:
         :param recursive:
         :return list: all downloaded filenames
         """
-        if prefix is '':
+        if prefix == '':
             prefix = './'
 
         if overwrite is False:
@@ -177,10 +177,10 @@ class S3:
     @staticmethod
     def upload_file(filename, bucket, key, boto=False):
         """upload filename to aws at s3://bucket/key/filename
-        :param key: key of S3 bucket to download
+        :param key: key of S3 bucket to upload
         :param bucket: name of S3 bucket
-        :param filename: name of file to download
-        :param boto: True if download using boto3 (default=False, uses awscli)
+        :param filename: name of file to upload
+        :param boto: True if upload using boto3 (default=False, uses awscli)
         """
 
         if key.startswith('/'):
@@ -196,8 +196,8 @@ class S3:
         if not boto:
             s3link = 's3://' + bucket + '/' + key
             cmd = 'aws s3 cp {fname} {s3link}'.format(fname=filename, s3link=s3link)
-            download_cmd = shlex.split(cmd)
-            Popen(download_cmd).wait()
+            upload_cmd = shlex.split(cmd)
+            Popen(upload_cmd).wait()
         else:
             client = boto3.client('s3')
             client.upload_file(filename, bucket, key)

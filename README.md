@@ -1,83 +1,150 @@
-## SEquence Quality Control (SEQC -- /sek-si:/)
+# SEquence Quality Control (SEQC -- /sek-si:/)
 
 ## Overview:
 
 SEQC is a python package that processes single-cell sequencing data in the cloud and analyzes it interactively on your local machine.
 
-To faciliate easy installation and use, we have made available Amazon Machine Images (AMIs) that come with all of SEQC's dependencies pre-installed. In addition, we have uploaded common genome indices (`-i/--index parameter`) and barcode data (`--barcode-files`) to public amazon s3 repositories. These links can be provided to SEQC and it will automatically fetch them prior to initiating an analysis run. Finally, it can fetch input data directly from BaseSpace or amazon s3 for analysis.
+To faciliate easy installation and use, we have made available Amazon Machine Images (AMIs) that come with all of SEQC's dependencies pre-installed. In addition, we have uploaded common genome indices (`-i/--index parameter`) and barcode data (`--barcode-files`) to public Amazon S3 repositories. These links can be provided to SEQC and it will automatically fetch them prior to initiating an analysis run. Finally, it can fetch input data directly from BaseSpace or amazon s3 for analysis.
 
-For users with access to in-house compute clusters, SEQC can be installed on your systems and run using the --local parameter.
+For users with access to in-house compute clusters, SEQC can be installed on your systems and run using the `--local` parameter.
 
-### Dependencies:
+## Dependencies:
 
+### Python 3
 
-#### Python3
-Python must be installed on your local machine to run SEQC. We recommend installing python3 through your unix operating system's package manager. For Mac OSX users we recommend <a href=http://brew.sh/>homebrew</a>. Typical installation commands would be:
+Python3 must be installed on your local machine to run SEQC. We recommend installing Python3 through Miniconda (https://docs.conda.io/en/latest/miniconda.html).
 
-    brew install python3  # mac
-    apt-get install python3  # debian
-    yum install python3 # rpm-based
+### Python 3 Libraries
 
-#### Python3 Libraries
+ We recommend creating a virtual environment before installing anything:
 
-Installing these libraries is necessary before installing SEQC.
+```bash
+conda create -n seqc python=3.7.7 pip
+conda activate seqc
+```
 
-    pip3 install Cython
-    pip3 install numpy
-    pip3 install bhtsne
+```bash
+pip install Cython
+pip install numpy
+pip install bhtsne
+```
 
-#### STAR
+### STAR, Samtools, and HDF5
+
 To process data locally using SEQC, you must install the <a href=https://github.com/alexdobin/STAR>STAR Aligner</a>, <a href=http://www.htslib.org/>Samtools</a>, and <a href=https://support.hdfgroup.org/HDF5/>hdf5</a>. If you only intend to use SEQC to trigger remote processing on AWS, these dependencies are optional. We recommend installing samtools and hdf5 through your package manager, if possible.
 
-#### Hardware Requirements:
+## SEQC Installation
+
+Once all dependencies have been installed, SEQC can be installed by running:
+
+```bash
+export SEQC_VERSION="0.2.6"
+wget https://github.com/hisplan/seqc/archive/v${SEQC_VERSION}.tar.gz
+tar xvzf v${SEQC_VERSION}.tar.gz
+cd seqc-${SEQC_VERSION}
+pip install .
+```
+
+## Hardware Requirements:
+
 For processing a single lane (~200M reads) against human- and mouse-scale genomes, SEQC requires 30GB RAM, approximately 200GB free hard drive space, and scales linearly with additional compute cores. If running on AWS (see below), jobs are automatically scaled up or down according to the size of the input. There are no hardware requirements for the computer used to launch remote instances.
 
+## Running SEQC on Local Machine:
 
-#### Amazon Web Services:
-SEQC can be run on any unix-based operating system, however it also features the ability to automatically spawn Amazon Web Services instances to process your data. If you wish to take advantage of AWS, you will need to follow their instructions to:
+Download an example dataset (1k PBMCs from a healthy donor; freely available at 10x Genomics https://support.10xgenomics.com/single-cell-gene-expression/datasets/3.0.0/pbmc_1k_v3):
+
+```bash
+wget https://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_fastqs.tar
+tar xvf pbmc_1k_v3_fastqs.tar
+```
+
+Move R1 FASTQ files to the `barcode` folder and R2 FASTQ files to the `genomic` folder:
+
+```bash
+mkdir barcode
+mkdir genomic
+mv ./pbmc_1k_v3_fastqs/*R1*.fastq.gz barcode/
+mv ./pbmc_1k_v3_fastqs/*R2*.fastq.gz genomic/
+```
+
+Download the 10x barcode whitelist file:
+
+```bash
+mkdir whitelist
+wget https://seqc-public.s3.amazonaws.com/barcodes/ten_x_v3/flat/3M-february-2018.txt
+mv 3M-february-2018.txt ./whitelist/
+```
+
+The resulting directory structure should look something like this:
+
+```
+.
+├── barcode
+│   ├── pbmc_1k_v3_S1_L001_R1_001.fastq.gz
+│   └── pbmc_1k_v3_S1_L002_R1_001.fastq.gz
+├── genomic
+│   ├── pbmc_1k_v3_S1_L001_R2_001.fastq.gz
+│   └── pbmc_1k_v3_S1_L002_R2_001.fastq.gz
+├── pbmc_1k_v3_fastqs
+│   ├── pbmc_1k_v3_S1_L001_I1_001.fastq.gz
+│   └── pbmc_1k_v3_S1_L002_I1_001.fastq.gz
+├── pbmc_1k_v3_fastqs.tar
+└── whitelist
+    └── 3M-february-2018.txt
+```
+
+Create a reference package (STAR index + gene annotation):
+
+```bash
+SEQC index \
+  --organism homo_sapiens \
+  --ensemble-release 93 \
+  --valid-biotypes protein_coding lincRNA antisense IG_V_gene IG_D_gene IG_J_gene IG_C_gene TR_V_gene TR_D_gene TR_J_gene TR_C_gene \
+  --read-length 101 \
+  --folder index \
+  --local
+```
+
+Run SEQC:
+
+```bash
+export AWS_DEFAULT_REGION=us-east-1
+export SEQC_MAX_WORKERS=7
+
+SEQC run ten_x_v3 \
+  --index ./index/ \
+  --barcode-files ./whitelist/ \
+  --barcode-fastq ./barcode/ \
+  --genomic-fastq ./genomic/ \
+  --upload-prefix ./seqc-results/ \
+  --output-prefix PBMC \
+  --no-filter-low-coverage \
+  --min-poly-t 0 \
+  --star-args runRNGseed=0 \
+  --local
+```
+
+## Running SEQC on Amazon Web Services:
+
+SEQC can be run on any unix-based operating system, however it also features the ability to automatically spawn Amazon Web Services instances to process your data.
 
 1. <a href=http://aws.amazon.com>Set up an AWS account</a>
 2. <a href=https://aws.amazon.com/cli/>Install and configure AWS CLI</a>
 3. <a href=http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html>Create and upload an rsa-key for AWS</a>
 
+Run SEQC:
 
-### SEQC Installation:
-
-Once all dependencies have been installed, SEQC can be installed on any machine by typing:
-
-    $> git clone https://github.com/dpeerlab/seqc.git
-    $> cd seqc && python3 setup.py install
-
-Please note that to avoid passing the -k/--rsa-key command when you execute SEQC runs, you can also set the environment variable `AWS_RSA_KEY` to the path to your newly created key.
-
-### Testing SEQC:
-
-All the unit tests in class `TestSEQC` in `test.py` have been tested. Currently, only two platforms `ten_x_v2` and `in_drop_v2` have been tested. Old unit tests from these two platforms together with other platforms are stored at `s3://dp-lab-data/seqc-old-unit-test/`.
-
-### Running SEQC:
-
-After SEQC is installed, help can be listed:
-
-    SEQC [-h] [-v] {run,progress,terminate,instances,start,index} ...
-
-    Processing Tools for scRNA-seq Experiments
-
-    positional arguments:
-      {run,progress,terminate,instances,start,index}
-        run                 initiate SEQC runs
-        progress            check SEQC run progress
-        terminate           terminate SEQC runs
-        instances           list all running instances
-        start               initialize a seqc-ready instance
-        index               create a SEQC index
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -v, --version         show program's version number and exit
-
-In addition to processing sequencing experiments, SEQC.py provides some convenience tools to create indices for use with SEQC and STAR, and tools to check the progress of remote runs, list current runs, start instances, and terminate them.
-
-To seamlessly start an AWS instance with automatic installation of SEQC from your local machine you can run:
-
-    SEQC start
-
+```bash
+SEQC run ten_x_v2 \
+  --ami-id ami-08652ee2477761403 \
+  --user-tags Job:Test,Project:PBMC-Test,Sample:pbmc_1k_v3 \
+  --index s3://seqc-public/genomes/hg38_long_polya/ \
+  --barcode-files s3://seqc-public/barcodes/ten_x_v2/flat/ \
+  --genomic-fastq s3://.../genomic/ \
+  --barcode-fastq s3://.../barcode/ \
+  --upload-prefix s3://.../seqc-results/ \
+  --output-prefix PBMC \
+  --no-filter-low-coverage \
+  --min-poly-t 0 \
+  --star-args runRNGseed=0
+```

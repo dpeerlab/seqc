@@ -112,7 +112,7 @@
    "outputs": [],
    "source": [
     "# load counts \n",
-    "columns = pd.read_csv(DATA, nrows=1, header=None).as_matrix()\n",
+    "columns = pd.read_csv(DATA, nrows=1, header=None).values\n",
     "if columns[0][0] == 'sample_number':\n",
     "    counts = pd.read_csv(DATA, index_col=[0, 1])\n",
     "else:\n",

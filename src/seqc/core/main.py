@@ -22,7 +22,7 @@ def clean_up_security_groups():
     )  # get security groups associated with instances
     unused_sgs = all_sgs - all_inst_sgs  # get ones without instance association
 
-    if len(unused_sgs) >= 300:
+    if len(unused_sgs) >= 100:
         print("Cleaning up the unused security groups:")
         client = boto3.client("ec2")
         for g in unused_sgs:
@@ -67,13 +67,22 @@ def main(argv):
                 "volume_size",
                 "user_tags",
                 "remote_update",
-                "ami_id"
+                "ami_id",
             )
             if getattr(verified_args, k)
         }
+
+        # store the command-line arguments supplied by the user
+        # the same aguments will be used to run SEQC on EC2
+        remote_args["argv"] = argv
+
+        # clean up AWS security groups
         clean_up_security_groups()
+
+        # start EC2 instance and run the function
         ec2.AWSInstance(synchronous=False, **remote_args)(func)(verified_args)
     else:
+        # run the function locally
         func(arguments)
 
 

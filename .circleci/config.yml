@@ -1,0 +1,33 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@0.2.1
+
+jobs:
+  build-and-test:
+    executor: python/default
+    steps:
+      - checkout
+      - python/load-cache
+      - run:
+          name: Install cython/numpy/bhtsne
+          command: |
+            pip install Cython
+            pip install numpy
+            pip install bhtsne
+      - python/install-deps
+      - python/save-cache
+      - run:
+          name: Install seqc
+          command: pip install .
+      - run:
+          name: Test
+          command: |
+            export TMPDIR="/tmp"
+            python -m nose2 -s src/seqc/tests test_run_rmt_correction
+
+
+workflows:
+  main:
+    jobs:
+      - build-and-test

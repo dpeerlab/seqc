@@ -7,7 +7,6 @@ from seqc.sequence.gtf import ensembl_gene_id_to_official_gene_symbol
 
 
 class SparseFrame:
-
     def __init__(self, data, index, columns):
         """
         lightweight wrapper of scipy.stats.coo_matrix to provide pd.DataFrame-like access
@@ -25,11 +24,11 @@ class SparseFrame:
         """
 
         if not isinstance(data, coo_matrix):
-            raise TypeError('data must be type coo_matrix')
+            raise TypeError("data must be type coo_matrix")
         if not isinstance(index, np.ndarray):
-            raise TypeError('index must be type np.ndarray')
+            raise TypeError("index must be type np.ndarray")
         if not isinstance(columns, np.ndarray):
-            raise TypeError('columns must be type np.ndarray')
+            raise TypeError("columns must be type np.ndarray")
 
         self._data = data
         self._index = index
@@ -42,7 +41,7 @@ class SparseFrame:
     @data.setter
     def data(self, item):
         if not isinstance(item, coo_matrix):
-            raise TypeError('data must be type coo_matrix')
+            raise TypeError("data must be type coo_matrix")
         self._data = item
 
     @property
@@ -54,7 +53,7 @@ class SparseFrame:
         try:
             self._index = np.array(item)
         except:
-            raise TypeError('self.index must be convertible into a np.array object')
+            raise TypeError("self.index must be convertible into a np.array object")
 
     @property
     def columns(self):
@@ -65,7 +64,7 @@ class SparseFrame:
         try:
             self._columns = np.array(item)
         except:
-            raise TypeError('self.columns must be convertible into a np.array object')
+            raise TypeError("self.columns must be convertible into a np.array object")
 
     @property
     def shape(self):
@@ -106,18 +105,22 @@ class SparseFrame:
         i_inds = np.fromiter((imap[v] for v in i), dtype=int)
         j_inds = np.fromiter((jmap[v] for v in j), dtype=int)
 
-        coo = coo_matrix((data, (i_inds, j_inds)), shape=(len(imap), len(jmap)),
-                         dtype=np.int32)
+        coo = coo_matrix(
+            (data, (i_inds, j_inds)), shape=(len(imap), len(jmap)), dtype=np.int32
+        )
 
         index = np.fromiter(imap.keys(), dtype=int)
         columns = np.fromiter(jmap.keys(), dtype=int)
 
         if genes_to_symbols:
             if not os.path.isfile(genes_to_symbols):
-                raise ValueError('genes_to_symbols argument %s is not a valid annotation '
-                                 'file' % repr(genes_to_symbols))
+                raise ValueError(
+                    "genes_to_symbols argument %s is not a valid annotation "
+                    "file" % repr(genes_to_symbols)
+                )
             gmap = create_gene_id_to_official_gene_symbol_map(genes_to_symbols)
-            columns = np.array(ensembl_gene_id_to_official_gene_symbol(
-                columns, gene_id_map=gmap))
+            columns = np.array(
+                ensembl_gene_id_to_official_gene_symbol(columns, gene_id_map=gmap)
+            )
 
         return cls(coo, index, columns)

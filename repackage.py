@@ -11,7 +11,11 @@ def ignore_test_and_tools(dir_, files):
     :param files: output of os.listdir(), files to be subjected to filtering
     :return list: list of files that should be filtered, and not copied.
     """
-    return [f for f in files if (f == "test" or f.startswith("."))]
+    return [
+        f
+        for f in files
+        if (f == "test" or f == "test-data" or f == "__pycache__" or f.startswith("."))
+    ]
 
 
 setup_dir = os.path.dirname(os.path.realpath(__file__))
@@ -27,5 +31,5 @@ if os.path.isdir(seqc_dir):
 # copy the SEQC files in the working directory to ~/.seqc/seqc
 shutil.copytree(setup_dir, seqc_dir, ignore=ignore_test_and_tools)
 
-# create .tag.gz of ~/.seqc/seqc/*
+# create .tar.gz of ~/.seqc/seqc/*
 shutil.make_archive(base_name=seqc_dir, format="gztar", root_dir=seqc_dir)
