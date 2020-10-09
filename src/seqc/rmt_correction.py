@@ -262,8 +262,8 @@ def _calc_max_workers(ra):
     # ra.data, ra.genes, and ra.positions are all numpy array
     ra_size = ra.data.nbytes + ra.genes.nbytes + ra.positions.nbytes
 
-    # extra bytes needed
-    extra = 2 * 1024 ** 3
+    # extra bytes needed (4GB)
+    extra = 4 * 1024 ** 3
 
     n = math.floor(_get_available_memory() / (ra_size + extra))
 
