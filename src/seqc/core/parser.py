@@ -253,7 +253,7 @@ def parse_args(args):
     start.add_argument(
         "-t",
         "--instance-type",
-        default="r5.2xlarge",
+        default="r5.4xlarge",
         help="AWS instance type to initialize. "
         "See https://aws.amazon.com/ec2/instance-types/ for valid types",
     )
@@ -368,7 +368,7 @@ def parse_args(args):
         )
         r.add_argument(
             "--instance-type",
-            default="r5.2xlarge",
+            default="r5.4xlarge",
             help="AWS instance type to initialize for this job. "
             "See https://aws.amazon.com/ec2/instance-types/ for valid types",
         )

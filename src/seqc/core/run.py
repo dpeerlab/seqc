@@ -415,7 +415,7 @@ def run(args) -> None:
             # 121319782799149 / 512866590 / pos=49490848 / TCAATTAATC (1 hemming dist away from TCAATTAATT)
             # ra.data["rmt"][91490] = 512866590
             # ra.positions[91490] = 49492038
-            
+
 
 
             # correct errors
@@ -619,7 +619,11 @@ def run(args) -> None:
                 % (args.alignment_file, args.upload_prefix)
             )
 
-        log.info("SEQC run complete. Cluster will be terminated")
+        log.info("SEQC run complete.")
+
+        end_run_time = pendulum.now()
+        running_time = end_run_time - start_run_time
+        log.info("Running Time={}".format(running_time.in_words()))
 
         # upload logs
         if args.upload_prefix:
@@ -656,6 +660,3 @@ def run(args) -> None:
             email_body = email_body.replace("\n", "<br>").replace("\t", "&emsp;")
             email_user(summary_archive, email_body, args.email)
 
-        end_run_time = pendulum.now()
-        running_time = end_run_time - start_run_time
-        log.info("Running Time={}".format(running_time.in_words()))
