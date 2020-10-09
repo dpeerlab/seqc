@@ -34,7 +34,7 @@ class TestRmtCorrection(TestCase):
 
         n_workers = rmt_correction._calc_max_workers(self.ra)
 
-        self.assertEqual(n_workers, 7)
+        self.assertEqual(n_workers, 5)
 
     # 1TB
     @mock.patch("seqc.rmt_correction._get_available_memory", return_value=1079354630144)
@@ -42,7 +42,7 @@ class TestRmtCorrection(TestCase):
 
         n_workers = rmt_correction._calc_max_workers(self.ra)
 
-        self.assertEqual(n_workers, 156)
+        self.assertEqual(n_workers, 119)
 
     # having less memory than ra size
     @mock.patch("seqc.rmt_correction._get_available_memory")
