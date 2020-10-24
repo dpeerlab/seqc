@@ -43,8 +43,8 @@ conda install -c bioconda star
 ## Install SEQC
 
 ```
-wget https://github.com/dpeerlab/seqc/archive/v0.2.6.tar.gz
-tar xvzf v0.2.6.tar.gz
-cd seqc-0.2.6/
+wget https://github.com/dpeerlab/seqc/archive/v0.2.8.tar.gz
+tar xvzf v0.2.8.tar.gz
+cd seqc-0.2.8/
 pip install .
 ```

@@ -38,7 +38,7 @@ To process data locally using SEQC, you must install the <a href=https://github.
 Once all dependencies have been installed, SEQC can be installed by running:
 
 ```bash
-export SEQC_VERSION="0.2.6"
+export SEQC_VERSION="0.2.8"
 wget https://github.com/hisplan/seqc/archive/v${SEQC_VERSION}.tar.gz
 tar xvzf v${SEQC_VERSION}.tar.gz
 cd seqc-${SEQC_VERSION}

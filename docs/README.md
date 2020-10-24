@@ -8,7 +8,7 @@
 
 ## Generating Reference Packages
 
-This generates a reference package (STAR index and GTF) using SEQC v0.2.6.
+This generates a reference package (STAR index and GTF) using SEQC v0.2.8.
 
 - Ensembl 86
 - Gene annotation file that contains only the reference chromosomes (no scaffolds, no patches)

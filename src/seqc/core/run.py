@@ -283,6 +283,10 @@ def run(args) -> None:
         ):
             args.filter_low_coverage = False
 
+        if args.platform == "ten_x_v2" or args.platform == "ten_x_v3":
+            log.notify("Setting min_poly_t=0 for 10x v2 & v3")
+            args.min_poly_t = 0            
+
         max_insert_size = args.max_insert_size
         if args.filter_mode == "scRNA-seq":
             # for scRNA-seq
